@@ -8,9 +8,9 @@ typedef enum Type {
   TYPE_NONE,
   TYPE_INT,
   TYPE_STRING,
-  TYPE_ID,
-  TYPE_NODE,
-  TYPE_FUNC
+  TYPE_ID, // 'label'
+  TYPE_NODE, // = node pointer
+  TYPE_FUNC // holds the lambda environment as first element, so is also used to distinguish lambda
 } Type;
 
 typedef struct Node {
@@ -41,8 +41,6 @@ typedef struct Node {
 Node * memory;
 uintptr_t memsize;
 
-// There is no 'beatiful' number for chunksize as long
-// as node size = 3 * word size :)
 #define chunksize 64
 void init_node_memory()
 {
@@ -178,7 +176,6 @@ Node * parse_nodes()
       // supporting dotted-pair ('cons') notation.
       Node * cdr = parse_value(read_non_whitespace_char()); // may also end up being a list
       val->next = cdr - memory;
-printf("CDR is element: %d\n", cdr->element);
       int ch = read_non_whitespace_char();
       if (ch != ')')
       {
@@ -195,14 +192,6 @@ printf("CDR is element: %d\n", cdr->element);
   else printf("Parse error: null value in list(\?\?)");
 
   return val;
-}
-
-Node * parse_list()
-{
-// TODO this option is required in pairs, the other at the root;
-// somehow in the middle both are fine??
-//  return parse_nodes();
-  return new_node(TYPE_NODE, parse_nodes() - memory);
 }
 
 Node * parse_label(int ch)
@@ -241,7 +230,7 @@ Node * parse_label(int ch)
 
 Node * parse_value(int ch)
 {
-  if(ch == '(') return parse_list();
+  if(ch == '(') return parse_nodes();
   else return parse_label(ch); // Everything is a label for now; refine based on actual value later.
 }
 
@@ -415,7 +404,15 @@ int main(int argc, char ** argv)
     printf("\n> ");
     ch = read_non_whitespace_char();
     node = parse_value(ch);
-    node = eval(node, &env);
+
+    // Since 'eval' only evaluates the first element even of a root-level list (as a convenience to our setup),
+    // make a distinction here and directly invoke 'apply' separately if we have parsed such a list expression.
+    // Essentially, 'eval' goes on to do the same thing for sub-lists (but distinguishes them by means of the
+    // node pointer value type).
+    if (node == NULL) continue;
+    if (node->element) node = eval(node, &env);
+    else node = apply (node, &memory[node->next], & env);
+
     print_node(node, false);
   } while(ch != -1);
   printf("\n"); // neatly exit on a clear line

@@ -4,235 +4,11 @@
 #include <stdbool.h>
 #include <string.h>	
 
-typedef enum Type {
-  TYPE_NONE,
-  TYPE_INT,
-  TYPE_STRING,
-  TYPE_ID, // 'label'
-  TYPE_NODE, // = node pointer
-  TYPE_FUNC // holds the lambda environment as first element, so is also used to distinguish lambda
-} Type;
+#include "node.h"
+#include "memory.h"
+#include "print.h"
+#include "parse.h"
 
-typedef struct Node {
-  uint8_t size : 3;
-  Type type : 3;
-  uint8_t mark: 1;
-  uint8_t element : 1; // TBD
-
-  uint32_t next : 24; // node index 'pointer'
-
-  union {
-    int32_t i32;
-    uint32_t u32;
-    char str[4];
-  } __attribute__((__packed__))  value;
-
-} __attribute__((__packed__)) Node;
-
-
-//
-// MEMORY
-//
-
-/**
- * We must do at least a bit of our own memory management
- * on nodes, so that we may also GC them.
- */
-Node * memory;
-uintptr_t memsize;
-
-#define chunksize 64
-void init_node_memory()
-{
-  memory = malloc(sizeof(Node) * chunksize);
-  memsize = 0;
-}
-
-Node * allocate_node()
-{
-  if(memsize%chunksize == 0)
-  {
-    memory = malloc(sizeof(Node) * (memsize+chunksize));
-  }
-  Node * node = &memory[memsize];
-  memsize++;
-  return node;
-}
-
-Node * new_node(Type type, uint32_t value)
-{
-  Node * node = allocate_node();
-  node->size = 0; // start counting at 0 so that we may have 8 :)
-  node->type = type;
-  node->mark = 0;
-  node->element = 1;
-  node->next = 0;
-  node->value.u32 = value;
-
-  return node;
-}
-
-#define as_string(value) ((char*) &(value))
-
-//
-// PRINTING
-//
-
-void print_node(Node * node, bool recursing)
-{
-  if (node == NULL) return; // happens when EOF
-  if (node - memory == 0) { printf("()"); return; }
-  if (!node->element && !recursing) printf("(");
-
-  switch(node->type)
-  {
-    case TYPE_INT: printf("%ld", node->value.i32);
-      break;
-    case TYPE_STRING:
-    case TYPE_ID:
-      printf("%s", as_string(node->value));
-      break;
-    case TYPE_NODE:
-      print_node(&memory[node->value.u32], false);
-      break;
-    case TYPE_FUNC:
-      printf("lambda");
-      break;
-  }
-
-  if (!node->element)
-  {
-    if(node->next == 0) printf(")");
-    else
-    {
-      if (memory[node->next].element)
-      {
-        printf(" . ");
-        print_node(&memory[node->next], false);
-        printf(")");
-      }
-      else
-      {
-        printf(" ");
-        print_node(&memory[node->next], true);
-      }
-    }
-  }
-}
-
-//
-// PARSING
-//
-int buffer = -2;
-
-int read_char()
-{
-  if (buffer > -2)
-  { int result = buffer; buffer = -2; return result; }
-  return getchar();
-}
-
-void unread(int ch)
-{
-  buffer = ch;
-}
-
-static inline bool is_whitespace_char(int ch)
-{
-  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
-}
-int read_non_whitespace_char()
-{
-  int ch = read_char();
-  while (ch != -1 && is_whitespace_char(ch))
-    ch = read_char();
-  return ch;
-}
-
-Node * parse_value(int ch);
-
-Node * parse_nodes()
-{
-  int ch = read_non_whitespace_char();
-  if (ch == ')') return memory; // NIL
-
-  // else
-  Node * val = parse_value(ch);
-  if (!val->element)
-  {
-    // We have parsed a full sublist as our 'value';
-    // convert our value field to a pointer to that list.
-    val = new_node(TYPE_NODE, val - memory);
-  }
-
-  // In all cases, we're being a list here (or a pair, or a false list - but not an atom).
-  val->element = false;
-
-  if (val != NULL)
-  {
-    ch = read_non_whitespace_char();
-    if (ch == '.')
-    {
-      // supporting dotted-pair ('cons') notation.
-      Node * cdr = parse_value(read_non_whitespace_char()); // may also end up being a list
-      val->next = cdr - memory;
-      int ch = read_non_whitespace_char();
-      if (ch != ')')
-      {
-        printf("Parse error: expecting ')' at end of dotted pair\n");
-        exit(-1);
-      }
-    }
-    else
-    {
-      unread(ch);
-      val->next = parse_nodes() - memory;
-    }
-  }
-  else printf("Parse error: null value in list(\?\?)");
-
-  return val;
-}
-
-Node * parse_label(int ch)
-{
-  if (ch == -1) return NULL;
-  Node * result = new_node(TYPE_ID, 0);
-  uint32_t index = result - memory;
-
-  int idx = 0;
-  result->size = 0; // +1
-
-  while
-  (
-    idx < 63 // we fit 8 nodes of size 8; but leave room for '\0'
-    && ch != -1 && ch != 0 && ch != ')' && ch != '.'
-    && !is_whitespace_char(ch)
-  )
-  {
-    result->value.str[idx++] = ch;
-    if ((idx+4) % 8 == 0)
-    {
-      allocate_node(); // we're not directly using this result...
-      result = &memory[index]; // (re-calibrate pointer in case memory moved)
-      result->size++;  // ...instead we're expanding into it
-    }
-
-    ch = read_char();
-  }
-
-  unread(ch);
-
-  result->value.str[idx] = '\0';
-
-  return result;
-}
-
-Node * parse_value(int ch)
-{
-  if(ch == '(') return parse_nodes();
-  else return parse_label(ch); // Everything is a label for now; refine based on actual value later.
-}
 
 //
 // SPECIAL FUNCTIONS
@@ -398,23 +174,23 @@ int main(int argc, char ** argv)
 
   // REPL!
   Node * node;
-  int ch;
   do
   {
     printf("\n> ");
-    ch = read_non_whitespace_char();
-    node = parse_value(ch);
+    node = parse();
+
+    // In case of EOF:
+    if (node == NULL) continue;
 
     // Since 'eval' only evaluates the first element even of a root-level list (as a convenience to our setup),
     // make a distinction here and directly invoke 'apply' separately if we have parsed such a list expression.
     // Essentially, 'eval' goes on to do the same thing for sub-lists (but distinguishes them by means of the
     // node pointer value type).
-    if (node == NULL) continue;
     if (node->element) node = eval(node, &env);
     else node = apply (node, &memory[node->next], & env);
 
     print_node(node, false);
-  } while(ch != -1);
+  } while(node != NULL);
   printf("\n"); // neatly exit on a clear line
   return 0;
 }

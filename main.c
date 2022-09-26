@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
     // Essentially, 'eval' goes on to do the same thing for sub-lists (but distinguishes them by means of the
     // node pointer value type).
     if (node->element) node = eval(node, &env);
-    else node = apply (node, &memory[node->next], & env);
+    else node = apply(node, &memory[node->next], & env);
 
     print_node(node, false);
   } while(node != NULL);

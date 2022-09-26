@@ -14,8 +14,15 @@
 //
 Node * eval(Node * expr, Node ** env);
 
-Node * copy(Node * node, bool recurse)
+/**
+ * n_recurse:
+ * - 0 = none
+ * - n = n times
+ * - -n = indefinitely (or until int wraps around...)
+ */
+Node * copy(Node * node, int n_recurse)
 {
+  if (node == NULL) return NULL;
   Node * result = new_node(node->type, node->value.u32);
   // Allocate any overflow nodes
   for (int i=0; i< node->size; i++)
@@ -23,8 +30,8 @@ Node * copy(Node * node, bool recurse)
 
   memcpy(result, node, sizeof(Node) * (node->size+1));
 
-  if (recurse && node->next != 0)
-    result->next = copy(&memory[node->next], recurse) - memory;
+  if (n_recurse > 0 && node->next != 0)
+    result->next = copy(&memory[node->next], n_recurse-1) - memory;
 
   return result;
 }
@@ -33,7 +40,7 @@ Node * element(Node * node)
 {
   if (!node->element)
   {
-    node = copy(node, false);
+    node = copy(node, 0);
     node->element = true;
     node->next = 0;
   }
@@ -48,7 +55,7 @@ Node * def_variable(Node ** env, Node * expr)
 {
   if(expr == NULL) return expr;
   Node * val = eval(&memory[expr->next], env);
-  Node * var = copy(expr, false);
+  Node * var = copy(expr, 0);
   var->next = val - memory;
 
   // Chain into to environment (at front)
@@ -67,7 +74,7 @@ Node * add_arg(Node * env, Node * name, Node * value)
 {
   // Setup into a pair just like with 'def'
   // Copy this so as not to modify the expression.
-  name = copy(name, false);
+  name = copy(name, 0);
   name->next = element(value) - memory;
 
   // Chain into to environment (at front)

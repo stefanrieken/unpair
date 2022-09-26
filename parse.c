@@ -65,7 +65,7 @@ Node * parse_nodes()
       if (ch != ')')
       {
         printf("Parse error: expecting ')' at end of dotted pair\n");
-        exit(-1);
+        return &memory[0];
       }
     }
     else
@@ -106,11 +106,17 @@ Node * parse_label(int ch)
     ch = read_char();
   }
 
-  unread(ch);
-
-  result->value.str[idx] = '\0';
-
-  return result;
+  if (idx == 0)
+  {
+    printf("Parse error: expected label; got '%c'.\n", ch);
+    return &memory[0];
+  }
+  else
+  {
+    unread(ch);
+    result->value.str[idx] = '\0';
+    return result;
+  }
 }
 
 Node * parse_value(int ch)

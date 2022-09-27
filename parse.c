@@ -86,22 +86,23 @@ Node * parse_label(int ch)
   uint32_t index = result - memory;
 
   int idx = 0;
-  result->size = 0; // +1
+
+  char * value_node = NULL;
+  int chars_per_node = sizeof(Node);
 
   while
   (
-    idx < 63 // we fit 8 nodes of size 8; but leave room for '\0'
-    && ch != -1 && ch != 0 && ch != ')' && ch != '.'
+    ch != -1 && ch != 0 && ch != ')' && ch != '.'
     && !is_whitespace_char(ch)
   )
   {
-    result->value.str[idx++] = ch;
-    if ((idx+4) % 8 == 0)
+    if (idx %8 == 0)
     {
-      allocate_node(); // we're not directly using this result...
+      value_node = (char *) allocate_node();
       result = &memory[index]; // (re-calibrate pointer in case memory moved)
-      result->size++;  // ...instead we're expanding into it
     }
+    value_node[idx % chars_per_node] = ch;
+    idx++;
 
     ch = read_char();
   }
@@ -114,7 +115,11 @@ Node * parse_label(int ch)
   else
   {
     unread(ch);
-    result->value.str[idx] = '\0';
+    value_node[idx % chars_per_node] = '\0';
+    idx++;
+    result->value.u32 = idx; // set size
+    result->array = true;
+
     return result;
   }
 }

@@ -38,7 +38,7 @@ Node * allocate_node()
 Node * new_node(Type type, uint32_t value)
 {
   Node * node = allocate_node();
-  node->size = 0; // start counting at 0 so that we may have 8 :)
+  node->array = 0;
   node->type = type;
   node->mark = 0;
   node->element = 1;

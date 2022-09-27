@@ -25,10 +25,12 @@ Node * copy(Node * node, int n_recurse)
   if (node == NULL) return NULL;
   Node * result = new_node(node->type, node->value.u32);
   // Allocate any overflow nodes
-  for (int i=0; i< node->size; i++)
+  int num_nodes = 0;
+  if (node->array) num_nodes = (node->value.u32 / 8) + 1;
+  for (int i=0; i< num_nodes; i++)
     allocate_node();
 
-  memcpy(result, node, sizeof(Node) * (node->size+1));
+  memcpy(result, node, sizeof(Node) * (num_nodes+1));
 
   if (n_recurse > 0 && node->next != 0)
     result->next = copy(&memory[node->next], n_recurse-1) - memory;
@@ -89,7 +91,7 @@ Node * lookup(Node * env, Node * name)
 {
   if(env == NULL || env == memory) return name; // return unresolved label
 
-  if(strcmp(as_string(name->value), as_string(memory[env->value.u32].value)) == 0) return &memory[env->value.u32];
+  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[env->value.u32];
   return lookup(&memory[env->next], name);
 }
 
@@ -146,14 +148,16 @@ Node * apply(Node * funcexpr, Node * args, Node ** env)
 
     if (func->type == TYPE_ID)
     {
-      if(strcmp("define", func->value.str) == 0) return def_variable(env, args);
-      if(strcmp("set!", func->value.str) == 0) return set_variable(env, args);
-      if(strcmp("lambda", func->value.str) == 0) return enclose((*env), args);
+      if(strcmp("define", strval(func)) == 0) return def_variable(env, args);
+      if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
+      if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
       // else: var or special did not resolve. Maybe should return empty list.
       // Return original expression instead so that you have something to look at in REPL.
       return funcexpr;
     }
     else if (func->type == TYPE_FUNC) return run_lambda(env, func, args);
+    
+    return funcexpr; // not usually reached
 }
 
 // Evaluate a single node, ignoring that it may be inside a list, so that:

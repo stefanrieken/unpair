@@ -11,21 +11,20 @@ typedef enum Type {
 } Type;
 
 typedef struct Node {
-  uint8_t size : 3;
-  Type type : 3;
+  Type type : 5; // up to 32
   uint8_t mark: 1;
-  uint8_t element : 1; // TBD
+  uint8_t array: 1; // value is size (always in bytes; re-interpret as needed); data is in subsequent node slots
+  uint8_t element : 1;
 
   uint32_t next : 24; // node index 'pointer'
 
   union {
     int32_t i32;
     uint32_t u32;
-    char str[4];
   } __attribute__((__packed__))  value;
 
 } __attribute__((__packed__)) Node;
 
-#define as_string(value) ((char*) &(value))
+#define strval(node) ((char*) (node + 1))
 
 #endif /*NODE_H*/

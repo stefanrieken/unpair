@@ -15,11 +15,13 @@ void print_node(Node * node, bool recursing)
 
   switch(node->type)
   {
-    case TYPE_INT: printf("%ld", node->value.i32);
+    case TYPE_NONE: printf("(none)");
+      break;
+    case TYPE_INT: printf("%d", node->value.i32);
       break;
     case TYPE_STRING:
     case TYPE_ID:
-      printf("%s", as_string(node->value));
+      printf("%s", strval(node));
       break;
     case TYPE_NODE:
       print_node(&memory[node->value.u32], false);

@@ -48,3 +48,27 @@ Node * new_node(Type type, uint32_t value)
   return node;
 }
 
+/**
+ * n_recurse:
+ * - 0 = none
+ * - n = n times
+ * - -n = indefinitely (or until int wraps around...)
+ */
+Node * copy(Node * node, int n_recurse)
+{
+  if (node == NULL) return NULL;
+  Node * result = new_node(node->type, node->value.u32);
+  // Allocate any overflow nodes
+  int num_nodes = 0;
+  if (node->array) num_nodes = (node->value.u32 / 8) + 1;
+  for (int i=0; i< num_nodes; i++)
+    allocate_node();
+
+  memcpy(result, node, sizeof(Node) * (num_nodes+1));
+
+  if (n_recurse > 0 && node->next != 0)
+    result->next = copy(&memory[node->next], n_recurse-1) - memory;
+
+  return result;
+}
+

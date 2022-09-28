@@ -29,6 +29,9 @@ void print_node(Node * node, bool recursing)
     case TYPE_FUNC:
       printf("lambda");
       break;
+    case TYPE_VAR:
+      printf("%s", strval(&memory[node->value.u32]));
+      break;
   }
 
   if (!node->element)

@@ -5,9 +5,10 @@ typedef enum Type {
   TYPE_NONE,
   TYPE_INT,
   TYPE_STRING,
-  TYPE_ID, // 'label'
+  TYPE_ID,   // = label
   TYPE_NODE, // = node pointer
-  TYPE_FUNC // holds the lambda environment as first element, so is also used to distinguish lambda
+  TYPE_FUNC, // holds the lambda environment as first element, so is also used to distinguish lambda
+  TYPE_VAR   // references the FULL (name val) entry for pre-dereferenced variables.
 } Type;
 
 typedef struct Node {

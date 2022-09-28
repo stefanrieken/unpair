@@ -11,5 +11,6 @@ extern uintptr_t memsize;
 void init_node_memory();
 Node * allocate_node();
 Node * new_node(Type type, uint32_t value);
+Node * copy(Node * node, int n_recurse);
 
 #endif /* MEMORY_H */

@@ -10,6 +10,8 @@
 #include "parse.h"
 #include "eval.h"
 
+#include "transform.h"
+
 int main(int argc, char ** argv)
 {
   printf("sizeof Node: %lu\n", sizeof(Node));
@@ -28,6 +30,9 @@ int main(int argc, char ** argv)
 
     // In case of EOF:
     if (node == NULL) continue;
+
+    if (node->element) node = transform_elem(node, &env);
+    else node = transform_expr(node, & env);
 
     // Since 'eval' only evaluates the first element even of a root-level list (as a convenience to our setup),
     // make a distinction here and directly invoke 'apply' separately if we have parsed such a list expression.

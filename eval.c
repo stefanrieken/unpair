@@ -9,35 +9,6 @@
 #include "eval.h"
 
 
-//
-// SPECIAL FUNCTIONS
-//
-Node * eval(Node * expr, Node ** env);
-
-/**
- * n_recurse:
- * - 0 = none
- * - n = n times
- * - -n = indefinitely (or until int wraps around...)
- */
-Node * copy(Node * node, int n_recurse)
-{
-  if (node == NULL) return NULL;
-  Node * result = new_node(node->type, node->value.u32);
-  // Allocate any overflow nodes
-  int num_nodes = 0;
-  if (node->array) num_nodes = (node->value.u32 / 8) + 1;
-  for (int i=0; i< num_nodes; i++)
-    allocate_node();
-
-  memcpy(result, node, sizeof(Node) * (num_nodes+1));
-
-  if (n_recurse > 0 && node->next != 0)
-    result->next = copy(&memory[node->next], n_recurse-1) - memory;
-
-  return result;
-}
-
 Node * element(Node * node)
 {
   if (!node->element)
@@ -104,7 +75,7 @@ Node * lookup_value(Node * env, Node * name)
 
 Node * set_variable(Node ** env, Node * expr)
 {
-  Node * var = lookup(*env, expr);
+  Node * var = &memory[expr->value.u32]; // no longer: lookup(*env, expr);
   Node * next = eval(&memory[expr->next], env);
   next->element = true;
   var->next = next - memory;
@@ -130,7 +101,7 @@ Node * run_lambda(Node ** env, Node * lambda, Node * args)
   {
     lambda_env = add_arg(lambda_env, argnames, eval(args, env));
     argnames = &memory[argnames->next];
-    args = &memory[args->next]; // TODO should eval these (NOT in lambda_env!)
+    args = &memory[args->next];
   }
 
   return eval(body, &lambda_env);
@@ -156,7 +127,8 @@ Node * apply(Node * funcexpr, Node * args, Node ** env)
       return funcexpr;
     }
     else if (func->type == TYPE_FUNC) return run_lambda(env, func, args);
-    
+
+    printf("Not found: %d\n", func->type);    
     return funcexpr; // not usually reached
 }
 
@@ -167,7 +139,8 @@ Node * apply(Node * funcexpr, Node * args, Node ** env)
 Node * eval(Node * expr, Node ** env)
 {
   if (expr == NULL || expr == memory) return expr;
-  if(expr->type == TYPE_ID) return lookup_value((*env), element(expr));
+  // if(expr->type == TYPE_ID) return lookup_value((*env), element(expr)); // should be deprecated by:
+  if(expr->type == TYPE_VAR) return &memory[ memory[expr->value.u32].next ];
   if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], &memory[ memory[expr->value.u32].next ], env);
 
   return element(expr);

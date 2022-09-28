@@ -34,6 +34,9 @@ int main(int argc, char ** argv)
     if (node->element) node = transform_elem(node, &env);
     else node = transform_expr(node, & env);
 
+    // In case of compilation error:
+    if (node == NULL) continue;
+
     // Since 'eval' only evaluates the first element even of a root-level list (as a convenience to our setup),
     // make a distinction here and directly invoke 'apply' separately if we have parsed such a list expression.
     // Essentially, 'eval' goes on to do the same thing for sub-lists (but distinguishes them by means of the

@@ -111,7 +111,7 @@ Node * dereference(Node * env, Node * name)
 {
   if(env == NULL || env == NIL)
   {
-     return NULL; // return unresolved label
+     return NIL; // return unresolved label
   }
 
   if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return new_node(TYPE_VAR, env->value.u32);
@@ -122,7 +122,7 @@ Node * dereference(Node * env, Node * name)
 Node * as_primitive(Node * label)
 {
   int num = find_primitive(strval(label));
-  if (num < 0) return NULL;
+  if (num < 0) return NIL;
   else return new_node(TYPE_PRIMITIVE, num);
 }
 
@@ -131,8 +131,8 @@ Node * transform_elem(Node * elem, Node ** env)
   if (elem->type == TYPE_ID)
   {
     Node * result = dereference(*env, elem);
-    if (result == NULL) result = as_primitive(elem);
-    if (result == NULL) printf("Compilation error: '%s' not found.\n", strval(elem));
+    if (result == NIL) result = as_primitive(elem);
+    if (result == NIL) printf("Compilation error: '%s' not found.\n", strval(elem));
     return result;
   }
   else if (elem->type == TYPE_NODE)
@@ -147,6 +147,7 @@ Node * transform_elements(Node * els, Node ** env)
 {
   if (els == NIL) return NIL;
   Node * result = transform_elem(els, env);
+  if (result == NIL) return NIL;
   result->element = false;
   result->next = transform_elements(&memory[els->next], env) - memory;
   return result;
@@ -157,8 +158,8 @@ Node * transform_expr(Node * expr, Node ** env)
   if (expr->type == TYPE_ID)
   {
     if (strcmp("define", strval(expr)) == 0) return define_variable(env, expr);
-    if(strcmp("lambda", strval(expr)) == 0) return expr; // should likely transform body here; but first just prevent args from automatically being transformed as well
-    if (strcmp("quote", strval(expr)) == 0) return &memory[expr->next];
+    if (strcmp("lambda", strval(expr)) == 0) return expr; // should likely transform body here; but first just prevent args from automatically being transformed as well
+    if (strcmp("quote" , strval(expr)) == 0) return &memory[expr->next]; // essentially just removing 'quote' again, and saving it from further transformation.
   }
 
   // default: transform all elements in expression

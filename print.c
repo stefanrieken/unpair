@@ -6,6 +6,7 @@
 
 #include "print.h"
 #include "memory.h"
+#include "primitive.h"
 
 void print_node(Node * node, bool recursing)
 {
@@ -31,6 +32,9 @@ void print_node(Node * node, bool recursing)
       break;
     case TYPE_VAR:
       printf("%s", strval(&memory[node->value.u32]));
+      break;
+    case TYPE_PRIMITIVE:
+      printf("%s", primitives[node->value.u32]);
       break;
   }
 

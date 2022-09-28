@@ -13,4 +13,6 @@ Node * allocate_node();
 Node * new_node(Type type, uint32_t value);
 Node * copy(Node * node, int n_recurse);
 
+// NIL == &memory[0]
+#define NIL memory
 #endif /* MEMORY_H */

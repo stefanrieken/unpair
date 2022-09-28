@@ -7,7 +7,7 @@
 #include "node.h"
 #include "memory.h"
 #include "eval.h"
-
+#include "primitive.h"
 
 Node * element(Node * node)
 {
@@ -106,6 +106,20 @@ Node * run_lambda(Node ** env, Node * lambda, Node * args)
 
   return eval(body, &lambda_env);
 }
+
+Node * eval_and_chain(Node * args, Node ** env)
+{
+  if (args == NIL) return NIL;
+  Node * result = eval(args, env);
+  result->next = eval_and_chain(&memory[args->next], env) - memory;
+  return result;
+}
+
+Node * run_primitive(Node ** env, Node * prim, Node * args)
+{
+  return jmptable[prim->value.u32](eval_and_chain(args, env), env);
+}
+
 //
 // EVAL / APPLY
 //
@@ -117,19 +131,27 @@ Node * apply(Node * funcexpr, Node * args, Node ** env)
     // Allow sub-expression at function name position
     Node * func = eval(funcexpr, env);
 
-    if (func->type == TYPE_ID)
+    switch(func->type)
     {
-      if(strcmp("define", strval(func)) == 0) return def_variable(env, args);
-      if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
-      if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
-      // else: var or special did not resolve. Maybe should return empty list.
-      // Return original expression instead so that you have something to look at in REPL.
-      return funcexpr;
+      case TYPE_ID:
+        if(strcmp("define", strval(func)) == 0) return def_variable(env, args);
+        if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
+        if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
+        // else: var or special did not resolve. Maybe should return empty list.
+        // Return original expression instead so that you have something to look at in REPL.
+        return funcexpr;
+        break;
+      case TYPE_FUNC:
+        return run_lambda(env, func, args);
+        break;
+      case TYPE_PRIMITIVE:
+        return run_primitive(env, func, args);
+        break;
+      default:
+        printf("Runtime error: don't know how to execute type '%s'.\n", types[func->type]);    
+        return funcexpr; // not usually reached
+        break;
     }
-    else if (func->type == TYPE_FUNC) return run_lambda(env, func, args);
-
-    printf("Not found: %d\n", func->type);    
-    return funcexpr; // not usually reached
 }
 
 // Evaluate a single node, ignoring that it may be inside a list, so that:

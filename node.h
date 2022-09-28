@@ -1,15 +1,20 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include <stdint.h>
+
 typedef enum Type {
   TYPE_NONE,
   TYPE_INT,
-  TYPE_STRING,
-  TYPE_ID,   // = label
-  TYPE_NODE, // = node pointer
-  TYPE_FUNC, // holds the lambda environment as first element, so is also used to distinguish lambda
-  TYPE_VAR   // references the FULL (name val) entry for pre-dereferenced variables.
+  TYPE_STRING,   // technically, 'char'; but it makes little sense outside of a char array aka string
+  TYPE_ID,       // = label
+  TYPE_NODE,     // = node pointer
+  TYPE_FUNC,     // holds the lambda environment as first element, so is also used to distinguish lambda
+  TYPE_VAR,      // references the FULL (name val) entry for pre-dereferenced variables.
+  TYPE_PRIMITIVE //
 } Type;
+
+extern char * types[];
 
 typedef struct Node {
   Type type : 5; // up to 32

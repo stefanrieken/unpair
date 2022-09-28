@@ -3,7 +3,7 @@
  * eval-time we do not need to repeat the same actions for the same outcome.
  * Such transformations may include:
  *
- * 1. Variable references are resolved to their value slots (DONE).
+ * 1. Variable references are resolved to their value slots: [v] DONE
  *    N.b.: this is NOT the same as resolving to their values;
  *    to support changeable in-line values, we still need an indirection.
  *    This has the advantage that the eval-time TYPE_VAR data is different
@@ -68,13 +68,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "node.h"
 #include "eval.h"
 #include "print.h"
 #include "memory.h"
-
-#define NIL (&memory[0])
+#include "primitive.h"
 
 Node * transform_expr(Node * expr, Node ** env);
 Node * transform_elem(Node * elem, Node ** env);
@@ -94,7 +94,7 @@ Node * define_variable(Node ** env, Node * expr)
 
     // Chain into to environment (at front)
     Node * newval = new_node(TYPE_NODE, name - memory);
-    newval->element = false; // TODO is this still required after eval?
+    newval->element = false;
     newval->next = (*env) - memory;
     (*env) = newval;
     return expr2;
@@ -109,21 +109,31 @@ Node * define_variable(Node ** env, Node * expr)
   */
 Node * dereference(Node * env, Node * name)
 {
-  if(env == NULL || env == memory) return name; // return unresolved label
+  if(env == NULL || env == NIL)
+  {
+     return NULL; // return unresolved label
+  }
 
   if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return new_node(TYPE_VAR, env->value.u32);
 
   return dereference(&memory[env->next], name);
 }
 
+Node * as_primitive(Node * label)
+{
+  int num = find_primitive(strval(label));
+  if (num < 0) return NULL;
+  else return new_node(TYPE_PRIMITIVE, num);
+}
 
 Node * transform_elem(Node * elem, Node ** env)
 {
   if (elem->type == TYPE_ID)
   {
-    //print_node(lookup_value((*env), elem), false);
-    //return lookup_value((*env), elem);
-    return dereference (*env, elem);
+    Node * result = dereference(*env, elem);
+    if (result == NULL) result = as_primitive(elem);
+    if (result == NULL) printf("Compilation error: '%s' not found.\n", strval(elem));
+    return result;
   }
   else if (elem->type == TYPE_NODE)
   {
@@ -147,7 +157,8 @@ Node * transform_expr(Node * expr, Node ** env)
   if (expr->type == TYPE_ID)
   {
     if (strcmp("define", strval(expr)) == 0) return define_variable(env, expr);
-    else if(strcmp("lambda", strval(expr)) == 0) return expr; // should likely transform body here; but first just prevent args from automatically being transformed as well
+    if(strcmp("lambda", strval(expr)) == 0) return expr; // should likely transform body here; but first just prevent args from automatically being transformed as well
+    if (strcmp("quote", strval(expr)) == 0) return &memory[expr->next];
   }
 
   // default: transform all elements in expression

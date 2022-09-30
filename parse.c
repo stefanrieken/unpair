@@ -175,7 +175,9 @@ Node * parse_quote()
   strcpy (value, "quote");
   quote->element = false;
 
-  quote->next = parse() - memory;
+  Node * val = parse();
+  val->element = false;
+  quote->next = val - memory;
   return quote;
 }
 

@@ -13,6 +13,56 @@
 
 #include "transform.h"
 
+// for 1-char args only!
+Node * make_arg(char * arg)
+{
+  Node * argnode = new_node(TYPE_ID, 2);
+  char * value = (char *) allocate_node();
+  strcpy (value, arg);
+  argnode->array = true;
+  return argnode;
+}
+
+Node * def_arg(Node * env, Node * name);
+Node * lookup(Node * env, Node * name);
+
+// An attempt at lambda-calculus style boolean values.
+// They are at memory locations 0 (false, empty list, NIL) and 1 (true)
+// TODO: since these are normal, (non-lazy / special) functions,
+// both the 'true' and 'false' arguments are evaluated, so presently
+// this cannot replace a complete 'if' implementation.
+void make_boolean(Node * slot)
+{
+  Node * env = NIL;
+ 
+  Node * a = make_arg("a");
+  Node * b = make_arg("b");
+
+  env = def_arg(env, a);
+  env = def_arg(env, b);
+
+  a->element=false;
+  b->element=false;
+  a->next = b - memory;
+  b->next = 0;
+
+  Node * arglist = new_node(TYPE_NODE, a - memory);
+  arglist->element=false;
+
+  Node * closure = new_node(TYPE_NODE, env - memory);
+  closure->element = false;
+  closure->next = arglist - memory;
+
+  Node * which = (slot == NIL) ? b : a;
+  Node * outcome = new_node(TYPE_VAR, lookup(env, which) - memory);
+  outcome->element=false;
+
+  arglist->next = outcome - memory;
+  slot->value.u32 = closure - memory;
+  slot->type = TYPE_FUNC;
+}
+
+
 int main(int argc, char ** argv)
 {
   if (isatty(fileno(stdin))) {
@@ -25,9 +75,17 @@ int main(int argc, char ** argv)
   // Setup
   infile = stdin;
   init_node_memory();
-  Node * nil = new_node(TYPE_NONE, 0); // must add this because index value zero is used as nil
-  nil->element = false; // trigger printing as '()'
-  Node * env = nil; // see?
+  
+  // Make placeholders for false & true
+  Node * nil = new_node(TYPE_INT, 0); // must add this because index value zero is used as nil
+  Node * truth = new_node(TYPE_INT, 1);
+  
+  // Fill placeholders (optional functionality; you can comment these out!)
+  make_boolean(nil);
+  make_boolean(truth);
+
+  // ...and start using them!
+  Node * env = nil;
 
   // REPL!
   Node * node;

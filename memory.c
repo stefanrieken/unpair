@@ -76,3 +76,18 @@ Node * copy(Node * node, int n_recurse)
   return result;
 }
 
+/**
+ * If the node is not yet an element,
+ * make an element copy.
+ */
+Node * element(Node * node)
+{
+  if (!node->element)
+  {
+    node = copy(node, 0);
+    node->element = true;
+    node->next = 0;
+  }
+  return node;
+}
+

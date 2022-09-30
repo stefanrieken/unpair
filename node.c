@@ -1,3 +1,4 @@
+#include "node.h"
 
 char * types[] = {
   "void",

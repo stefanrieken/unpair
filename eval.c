@@ -12,20 +12,9 @@
 // ...because we didn't do it before:
 #include "transform.h"
 
-Node * element(Node * node)
-{
-  if (!node->element)
-  {
-    node = copy(node, 0);
-    node->element = true;
-    node->next = 0;
-  }
-  return node;
-}
-
 Node * lookup(Node * env, Node * name)
 {
-  if(env == NULL || env == memory)
+  if(env == NULL || env == NIL)
   {
     // This should be normally caught as a compile time error
     printf("Runtime error: cannot find variable '%s'\n", strval(name));

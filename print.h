@@ -3,6 +3,6 @@
 
 #include "node.h"
 
-void print_node(Node * node, bool recursing);
+void print(Node * node);
 
 #endif /* PRINT_H */

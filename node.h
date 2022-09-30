@@ -9,7 +9,7 @@ typedef enum Type {
   TYPE_STRING,   // technically, 'char'; but it makes little sense outside of a char array aka string
   TYPE_ID,       // = label
   TYPE_NODE,     // = node pointer
-  TYPE_FUNC,     // holds the lambda environment as first element, so is also used to distinguish lambda
+  TYPE_FUNC,     // = closure (transformed lambda)
   TYPE_VAR,      // references the FULL (name val) entry for pre-dereferenced variables.
   TYPE_PRIMITIVE //
 } Type;
@@ -18,7 +18,7 @@ extern char * types[];
 
 typedef struct Node {
   Type type : 5; // up to 32
-  uint8_t mark: 1;
+  uint8_t mark: 1;  // for use by GC
   uint8_t array: 1; // value is size (always in bytes; re-interpret as needed); data is in subsequent node slots
   uint8_t element : 1;
 

@@ -8,6 +8,9 @@
 #include "memory.h"
 #include "eval.h"
 #include "primitive.h"
+#include "print.h"
+// ...because we didn't do it before:
+#include "transform.h"
 
 Node * element(Node * node)
 {
@@ -20,35 +23,35 @@ Node * element(Node * node)
   return node;
 }
 
-/**
- * expr: e.g. the arguments to 'define' (simplest form), so (label, value)
- * Returns new node & makes new env pointer.
- */
-Node * def_variable(Node ** env, Node * expr)
+Node * lookup(Node * env, Node * name)
 {
-  if(expr == NULL) return expr;
-  Node * val = eval(&memory[expr->next], env);
-  Node * var = copy(expr, 0);
-  var->next = val - memory;
+  if(env == NULL || env == memory)
+  {
+    // This should be normally caught as a compile time error
+    printf("Runtime error: cannot find variable '%s'\n", strval(name));
+    return NIL; // by means of recovery??
+  }
 
-  // Chain into to environment (at front)
-  Node * newval = new_node(TYPE_NODE, var - memory);
-  newval->element = false; // TODO is this still required after eval?
-  newval->next = (*env) - memory;
-  (*env) = newval;
+  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[env->value.u32];
+  return lookup(&memory[env->next], name);
+}
+
+
+Node * set_variable(Node ** env, Node * expr)
+{
+  Node * var = &memory[expr->value.u32]; // no longer: lookup(*env, expr);
+  Node * val = eval(&memory[expr->next], env);
+  val->element = true;
+  var->next = val - memory;
   return val;
 }
 
-/**
- * As above, but tailored to setting lambda arguments.
- * Returns new env.
- */
-Node * add_arg(Node * env, Node * name, Node * value)
+// Returns the changed environment
+Node * def_arg(Node * env, Node * name)
 {
-  // Setup into a pair just like with 'def'
-  // Copy this so as not to modify the expression.
   name = copy(name, 0);
-  name->next = element(value) - memory;
+  name->element = false;
+  name->next = 0;
 
   // Chain into to environment (at front)
   Node * newval = new_node(TYPE_NODE, name - memory);
@@ -58,48 +61,59 @@ Node * add_arg(Node * env, Node * name, Node * value)
   return env;
 }
 
-Node * lookup(Node * env, Node * name)
-{
-  if(env == NULL || env == memory) return name; // return unresolved label
-
-  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[env->value.u32];
-  return lookup(&memory[env->next], name);
-}
-
-Node * lookup_value(Node * env, Node * name)
-{
-  Node * var = lookup(env, name);
-  if (var->next == 0) return var; // lookup returns 'name' if not found; return that.
-  return &memory[var->next];
-}
-
-Node * set_variable(Node ** env, Node * expr)
-{
-  Node * var = &memory[expr->value.u32]; // no longer: lookup(*env, expr);
-  Node * next = eval(&memory[expr->next], env);
-  next->element = true;
-  var->next = next - memory;
-  return next;
-}
-
 Node * enclose(Node * env, Node * lambda)
 {
-  // Result: ((env) (args) (body))
-  Node * closure = new_node(TYPE_FUNC, env - memory);
+  // Input: ((arglist) body-expr)
+  // Result: ((env) (args) (transformed-body)
+  // May be: ((env) (n-args) body))
+
+  // Define lambda args as env variables:
+  // By chaining them in at front, and the env is
+  // naturally extended into the lambda's env.
+  Node * argnames = &memory[lambda->value.u32];
+
+  // Define that variables.
+  // This is one point to change to support complicated
+  // argument pattern matching (deconstruction) like &rest.
+  while (argnames != NIL)
+  {
+    env = def_arg(env, argnames);
+    argnames = &memory[argnames->next];
+  }
+  
+  // And transform expression
+  Node * arglist = copy(lambda, 0);
+  Node * body = transform_elem(&memory[lambda->next], &env);
+  body->element = false;
+  arglist->next = body - memory;
+
+  // We define our closure as a list: (env args body)
+  // But that is actually an implementation detail;
+  // so that's why we return the result (a func) as a new type.
+  // TODO in theory we don't even need to keep env, since we have pre-wired 'body'!
+  Node * closure = new_node(TYPE_NODE, env - memory);
   closure->element=false;
-  closure->next = lambda - memory;
-  return closure;
+  closure->next = arglist - memory;
+
+  // We should return a (single) element
+  return new_node(TYPE_FUNC, closure - memory);
 }
 
-Node * run_lambda(Node ** env, Node * lambda, Node * args)
+Node * run_lambda(Node ** env, Node * expr, Node * args)
 {
+  Node * lambda = &memory[expr->value.u32];
+
   Node * lambda_env = &memory[lambda->value.u32];
   Node * argnames =   &memory[ memory[lambda->next].value.u32 ];
   Node * body =   &memory[ memory[lambda->next].next ];
   
   while (argnames != NULL && argnames != memory) // aka NIL
   {
-    lambda_env = add_arg(lambda_env, argnames, eval(args, env));
+    // In theory the args should be in a predictable position in the env,
+    // but here we just do the lookup.
+    // This is the other point to change for &rest support, etc.
+    Node * var = lookup(lambda_env, argnames);
+    var->next = eval(args, env) - memory;
     argnames = &memory[argnames->next];
     args = &memory[args->next];
   }
@@ -111,6 +125,7 @@ Node * eval_and_chain(Node * args, Node ** env)
 {
   if (args == NIL) return NIL;
   Node * result = eval(args, env);
+  result->element = false;
   result->next = eval_and_chain(&memory[args->next], env) - memory;
   return result;
 }
@@ -126,15 +141,16 @@ Node * run_primitive(Node ** env, Node * prim, Node * args)
 
 
 // Evaluate a list expression, that is, apply function to args.
-Node * apply(Node * funcexpr, Node * args, Node ** env)
+Node * apply(Node * funcexpr, Node ** env)
 {
     // Allow sub-expression at function name position
     Node * func = eval(funcexpr, env);
+    Node * args = &memory[funcexpr->next];
 
     switch(func->type)
     {
       case TYPE_ID:
-        if(strcmp("define", strval(func)) == 0) return def_variable(env, args);
+        if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
         // else: var or special did not resolve. Maybe should return empty list.
@@ -148,22 +164,23 @@ Node * apply(Node * funcexpr, Node * args, Node ** env)
         return run_primitive(env, func, args);
         break;
       default:
-        printf("Runtime error: don't know how to execute type '%s'.\n", types[func->type]);    
+        // The normal way to get here is because 'quote' preserved our list from transformation.
+        // (Then afterwards 'quote' itself was removed from the data stream.)
+        // In this case eval(funcexpr) should also not have done anything.
+        // Nevertheless it is a bit cheeky that 'quote' actually causes these attempts.
         return funcexpr; // not usually reached
         break;
     }
 }
 
-// Evaluate a single node, ignoring that it may be inside a list, so that:
-// value => value as element(!)
-// id => lookup(id)
-// (..) => apply (..)
+// Evaluate a single node, ignoring that it may be inside a list -
+// but always returning the result as an element
 Node * eval(Node * expr, Node ** env)
 {
-  if (expr == NULL || expr == memory) return expr;
+  if (expr == NULL || expr == NIL) return expr;
   // if(expr->type == TYPE_ID) return lookup_value((*env), element(expr)); // should be deprecated by:
-  if(expr->type == TYPE_VAR) return &memory[ memory[expr->value.u32].next ];
-  if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], &memory[ memory[expr->value.u32].next ], env);
+  if(expr->type == TYPE_VAR) return element(&memory[ memory[expr->value.u32].next ]);
+  if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], env);
 
   return element(expr);
 }

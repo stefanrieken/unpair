@@ -17,7 +17,7 @@
 Node * memory;
 uintptr_t memsize;
 
-#define chunksize 64
+#define chunksize 1024
 void init_node_memory()
 {
   memory = malloc(sizeof(Node) * chunksize);
@@ -28,7 +28,9 @@ Node * allocate_node()
 {
   if(memsize%chunksize == 0)
   {
-    memory = malloc(sizeof(Node) * (memsize+chunksize));
+    Node * mem_old = memory;
+    memory = realloc(memory, sizeof(Node) * (memsize+chunksize));
+    if (mem_old != memory) printf("WARN: memory moved. This invalidates all pointers, which we presently can't handle!\n");
   }
   Node * node = &memory[memsize];
   memsize++;
@@ -68,6 +70,8 @@ Node * copy(Node * node, int n_recurse)
 
   if (n_recurse > 0 && node->next != 0)
     result->next = copy(&memory[node->next], n_recurse-1) - memory;
+  else
+    result->next = 0;
 
   return result;
 }

@@ -8,11 +8,10 @@
 #include "memory.h"
 #include "primitive.h"
 
-void print_node(Node * node, bool recursing)
+void print_node(Node * node)
 {
   if (node == NULL) return; // happens when EOF
-  if (node - memory == 0) { printf("()"); return; }
-  if (!node->element && !recursing) printf("(");
+  if (node == NIL) { return; }
 
   switch(node->type)
   {
@@ -25,10 +24,14 @@ void print_node(Node * node, bool recursing)
       printf("%s", strval(node));
       break;
     case TYPE_NODE:
-      print_node(&memory[node->value.u32], false);
+      printf("(");
+      print_node(&memory[node->value.u32]);
+      printf(")");
       break;
     case TYPE_FUNC:
-      printf("lambda");
+      printf("(lambda ");
+      print_node(&memory[memory[node->value.u32].next]);
+      printf(")");
       break;
     case TYPE_VAR:
       printf("%s", strval(&memory[node->value.u32]));
@@ -38,23 +41,25 @@ void print_node(Node * node, bool recursing)
       break;
   }
 
-  if (!node->element)
+  if (!node->element && !node->next == 0)
   {
-    if(node->next == 0) printf(")");
+    if (memory[node->next].element)
+    {
+      printf(" . ");
+      print_node(&memory[node->next]);
+    }
     else
     {
-      if (memory[node->next].element)
-      {
-        printf(" . ");
-        print_node(&memory[node->next], false);
-        printf(")");
-      }
-      else
-      {
-        printf(" ");
-        print_node(&memory[node->next], true);
-      }
+      printf(" ");
+      print_node(&memory[node->next]);
     }
   }
 }
 
+void print(Node * node)
+{
+  if (!node->element) printf("(");
+  print_node(node);
+  if (!node->element) printf(")");
+  printf("\n");
+}

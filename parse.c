@@ -9,11 +9,12 @@
 
 int buffer = -2;
 
+FILE * infile;
 int read_char()
 {
   if (buffer > -2)
   { int result = buffer; buffer = -2; return result; }
-  return getchar();
+  return fgetc(infile);
 }
 
 void unread(int ch)
@@ -180,6 +181,14 @@ Node * parse_quote()
 
 Node * parse_value(int ch)
 {
+  while (ch == ';') {
+    // skip line
+    do ch = read_char();
+    while (ch != -1 && ch != '\n');
+
+    ch = read_non_whitespace_char();
+  }
+
   if(ch == '(') return parse_nodes(); else
   if (ch == '\'') return parse_quote();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.

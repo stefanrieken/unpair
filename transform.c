@@ -76,31 +76,61 @@
 #include "memory.h"
 #include "primitive.h"
 
-Node * transform_expr(Node * expr, Node ** env);
-Node * transform_elem(Node * elem, Node ** env);
+#include "transform.h"
+
+
+/**
+ * Transform the expressions for define and set! to their eval-time form.
+ */
+Node * transform_set(Node ** env, Node * expr)
+{
+  if (expr->next != 0)
+  {
+    Node * name = &memory[expr->next];
+    Node * value = &memory[name->next]; // may be NIL
+
+    Node * expr2 =copy(expr, 0);
+    Node * var = transform_elem(name, env); // does the VAR lookup, or any other applicable shenanigans
+    var->element = false;
+    Node * val = transform(value, env);
+
+    expr2->next = var-memory;
+    var->next = val-memory;
+    
+    return expr2;
+  }
+  // else
+  printf ("Compile error: missing variable name in 'set' expression.\n");
+  return NULL;
+}
 
 /**
  * Define the variable, transforming but not eval'ing the variable expression.
  * expr: e.g. the arguments to 'define' (simplest form), so (label, value)
- * Returns new node & makes new env pointer.
+ *
+ * Returns the transformed form fur further execution upon 'eval' time.
  */
 Node * define_variable(Node ** env, Node * expr)
 {
   if (expr->next != 0)
   {
-    Node * expr2 =copy(expr, 1);
-    Node * name = &memory[expr2->next];
-    name->next = transform_elem(&memory[ memory[expr->next].next ], env) - memory;
+    // Make new env entry
+    Node * name = copy(&memory[expr->next], 0);
+    name->element = false;
+    name->next = 0;
 
     // Chain into to environment (at front)
     Node * newval = new_node(TYPE_NODE, name - memory);
     newval->element = false;
     newval->next = (*env) - memory;
     (*env) = newval;
-    return expr2;
+
+    // Change the run-time expression (borrow code for 'set')
+    return transform_set(env, expr);
   }
   // else
-  return expr;
+  printf ("Compile error: missing variable name in 'set' expression.\n");
+  return NULL;
 }
 
 /**
@@ -148,7 +178,7 @@ Node * transform_elements(Node * els, Node ** env)
   if (els == NIL) return NIL;
   Node * result = transform_elem(els, env);
   if (result == NIL) return NIL;
-  result->element = false;
+  result->element = els->element;
   result->next = transform_elements(&memory[els->next], env) - memory;
   return result;
 }
@@ -158,10 +188,23 @@ Node * transform_expr(Node * expr, Node ** env)
   if (expr->type == TYPE_ID)
   {
     if (strcmp("define", strval(expr)) == 0) return define_variable(env, expr);
-    if (strcmp("lambda", strval(expr)) == 0) return expr; // should likely transform body here; but first just prevent args from automatically being transformed as well
+    if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
+    if (strcmp("set!", strval(expr)) == 0) return transform_set(env, expr);
     if (strcmp("quote" , strval(expr)) == 0) return &memory[expr->next]; // essentially just removing 'quote' again, and saving it from further transformation.
+    return transform_elements(expr, env); // e.g. for primitives
   }
-
-  // default: transform all elements in expression
+  else if (expr->type == TYPE_NODE)
+  {
+    return transform_elements(expr, env); // e.g. for lambda
+  }
+  // else
+  printf("Compile error: value type '%s' not supported for function epxression\n", types[expr->type]);
   return transform_elements(expr, env);
 }
+
+Node * transform(Node * node, Node ** env)
+{
+    if (node->element) return transform_elem(node, env);
+    else return transform_expr(node, env);  
+}
+

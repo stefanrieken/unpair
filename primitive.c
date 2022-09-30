@@ -8,7 +8,7 @@
 // For cases with literal values, we could invent shorthand bytecode:
 // push int val +1
 
-Node * plus(Node * args, Node ** anv)
+Node * plus(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
   args = &memory[args->next];
@@ -20,7 +20,7 @@ Node * plus(Node * args, Node ** anv)
   return result;
 }
 
-Node * minus(Node * args, Node ** anv)
+Node * minus(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
   args = &memory[args->next];
@@ -32,7 +32,7 @@ Node * minus(Node * args, Node ** anv)
   return result;
 }
 
-Node * times(Node * args, Node ** anv)
+Node * times(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
   args = &memory[args->next];
@@ -44,7 +44,7 @@ Node * times(Node * args, Node ** anv)
   return result;
 }
 
-Node * div(Node * args, Node ** anv)
+Node * div(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
   args = &memory[args->next];
@@ -52,7 +52,7 @@ Node * div(Node * args, Node ** anv)
   return result;
 }
 
-Node * remain(Node * args, Node ** anv)
+Node * remain(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
   args = &memory[args->next];
@@ -60,16 +60,23 @@ Node * remain(Node * args, Node ** anv)
   return result;
 }
 
-#define NUM_PRIMITIVES 5
+// As per the rules for (no) recursiveness,
+// We can't simply put 'env' in 'env' (and expect it to print);
+// so instead supply a simple primitive.
+Node * env(Node * args, Node ** env)
+{
+  return *env;
+}
+#define NUM_PRIMITIVES 6
 
 char * primitives[NUM_PRIMITIVES] =
 {
-  "+", "-", "*", "/", "%"
+  "+", "-", "*", "/", "%", "env"
 };
 
 PrimitiveCb jmptable[NUM_PRIMITIVES] =
 {
-  plus, minus, times, div, remain
+  plus, minus, times, div, remain, env
 };
 
 int find_primitive(char * name)

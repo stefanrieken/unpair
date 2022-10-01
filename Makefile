@@ -1,4 +1,4 @@
-OBJECTS=node.o memory.o parse.o print.o primitive.o transform.o eval.o
+OBJECTS=node.o memory.o parse.o print.o primitive.o transform.o eval.o gc.o
 CFLAGS=-Wall -Wunused -Os
 
 all: unpair

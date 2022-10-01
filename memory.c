@@ -30,7 +30,7 @@ Node * allocate_node()
   {
     Node * mem_old = memory;
     memory = realloc(memory, sizeof(Node) * (memsize+chunksize));
-    if (mem_old != memory) printf("WARN: memory moved. This invalidates all pointers, which we presently can't handle!\n");
+    if (mem_old != memory) printf("WARN: memory moved (memsize=%ld). This invalidates all pointers, which we presently can't handle!\n", memsize);
   }
   Node * node = &memory[memsize];
   memsize++;
@@ -40,10 +40,10 @@ Node * allocate_node()
 Node * new_node(Type type, uint32_t value)
 {
   Node * node = allocate_node();
-  node->array = 0;
+  node->array = false;
   node->type = type;
-  node->mark = 0;
-  node->element = 1;
+  node->mark = false;
+  node->element = true;
   node->next = 0;
   node->value.u32 = value;
 
@@ -62,7 +62,7 @@ Node * copy(Node * node, int n_recurse)
   Node * result = new_node(node->type, node->value.u32);
   // Allocate any overflow nodes
   int num_nodes = 0;
-  if (node->array) num_nodes = (node->value.u32 / 8) + 1;
+  if (node->array) num_nodes = (node->value.u32 / sizeof(Node)) + 1;
   for (int i=0; i< num_nodes; i++)
     allocate_node();
 

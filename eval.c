@@ -143,8 +143,7 @@ Node * apply(Node * funcexpr, Node ** env)
         if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
         if(strcmp("quote", strval(func)) == 0) return element(args);
-        // else: var or special did not resolve. Maybe should return empty list.
-        // Return original expression instead so that you have something to look at in REPL.
+        // else
         printf("Runtime error: could not execute id '%s'.\n", strval(func));
         return funcexpr;
         break;
@@ -155,7 +154,7 @@ Node * apply(Node * funcexpr, Node ** env)
         return run_primitive(env, func, args);
         break;
       default:
-        printf("Runtime erro: can't execute type '%s'.\n", types[func->type]);
+        printf("Runtime error: can't execute type '%s'.\n", types[func->type]);
         return funcexpr; // not usually reached
         break;
     }

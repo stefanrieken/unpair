@@ -84,7 +84,6 @@ Node * parse_label(int ch)
 {
   if (ch == -1) return NULL;
   Node * result = new_node(TYPE_ID, 0);
-  uint32_t index = result - memory;
 
   int idx = 0;
 
@@ -97,11 +96,8 @@ Node * parse_label(int ch)
     && !is_whitespace_char(ch)
   )
   {
-    if (idx % sizeof(Node) == 0)
-    {
-      value_node = (char *) allocate_node();
-      result = &memory[index]; // (re-calibrate pointer in case memory moved)
-    }
+    if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
+
     value_node[idx % chars_per_node] = ch;
     idx++;
 
@@ -116,6 +112,7 @@ Node * parse_label(int ch)
   else
   {
     unread(ch);
+    if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
     value_node[idx % chars_per_node] = '\0';
     idx++;
     result->value.u32 = idx; // set size
@@ -174,6 +171,7 @@ Node * parse_quote()
   char * value = (char *) allocate_node();
   strcpy (value, "quote");
   quote->element = false;
+  quote->array = true;
 
   Node * val = parse();
   val->element = false;
@@ -191,7 +189,7 @@ Node * parse_value(int ch)
     ch = read_non_whitespace_char();
   }
 
-  if(ch == '(') return parse_nodes(); else
+  if(ch == '(') return new_node(TYPE_NODE, parse_nodes() - memory); else
   if (ch == '\'') return parse_quote();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.
 }

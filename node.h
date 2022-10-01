@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 typedef enum Type {
-  TYPE_NONE,
   TYPE_INT,
   TYPE_STRING,   // technically, 'char'; but it makes little sense outside of a char array aka string
   TYPE_ID,       // = label
@@ -31,6 +30,9 @@ typedef struct Node {
 
 } __attribute__((__packed__)) Node;
 
+
 #define strval(node) ((char*) (node + 1))
+
+int mem_usage(Node * list);
 
 #endif /*NODE_H*/

@@ -12,8 +12,6 @@ void print_node(Node * node)
 {
   switch(node->type)
   {
-    case TYPE_NONE: printf("(none)");
-      break;
     case TYPE_INT: printf("%d", node->value.i32);
       break;
     case TYPE_STRING:

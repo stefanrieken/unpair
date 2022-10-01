@@ -1,9 +1,11 @@
 #include <string.h>
+#include <stdbool.h>
 
 #include "node.h"
 #include "memory.h"
 
 #include "primitive.h"
+#include "gc.h"
 
 // For cases with literal values, we could invent shorthand bytecode:
 // push int val +1
@@ -85,6 +87,37 @@ Node * gt (Node * lhs, Node ** env)
   return (lhs->value.i32 > rhs->value.i32) ? NIL+1 : NIL;
 }
 
+Node * car (Node * val, Node ** env)
+{
+  Node * list = &memory[val->value.u32];
+  return element(list);
+}
+
+Node * cdr (Node * val, Node ** env)
+{
+  Node * list = &memory[val->value.u32];
+  return &memory[list->next];
+}
+
+// Make (copy) a node with car value of arg1,
+// and cdr value of arg2.
+// This requires a bit of translation in our case:
+// (cons a b)    => (a . b) -> arg1.next = element(arg2)
+// (cons a (b))  => (a b)   -> arg1.next = arg2.value
+// (cons a ())   => (a)     -> arg1.next = arg2.value
+
+Node * cons (Node * list, Node ** env)
+{
+  Node * cdr = &memory[list->next];
+  list = copy(list, 0);
+  if (cdr->type == TYPE_NODE)
+    list->next = cdr->value.u32;
+  else
+    list->next = element(cdr) - memory;
+  
+  return list;
+}
+
 // As per the rules for (no) recursiveness,
 // We can't simply put 'env' in 'env' (and expect it to print);
 // so instead supply a simple primitive.
@@ -92,16 +125,41 @@ Node * env(Node * args, Node ** env)
 {
   return *env;
 }
-#define NUM_PRIMITIVES 9
+
+Node * gc(Node * args, Node ** env)
+{
+  int marked = 0;
+  // This is all we can reach from here... it should suffice
+  marked += mark(NIL);
+  marked += mark(NIL+1); // true
+  // marked += mark(freelist);
+  marked += mark(args);
+  marked += mark (*env);
+  
+  Node * freelist = sweep(NIL, 0);
+
+  // for now just return garbage stats
+  Node * stats = new_node(TYPE_INT, memsize);
+  stats->element = false;
+  Node * marked_node = new_node(TYPE_INT, marked);
+  marked_node->element = false;
+  stats->next = marked_node - memory;
+  Node * swept_node = new_node(TYPE_INT, mem_usage(freelist));
+  swept_node->element = false;
+  marked_node->next = swept_node - memory;
+  return stats;
+}
+
+#define NUM_PRIMITIVES 13
 
 char * primitives[NUM_PRIMITIVES] =
 {
-  "+", "-", "*", "/", "%", "=", "<", ">", "env"
+  "+", "-", "*", "/", "%", "=", "<", ">", "car", "cdr", "cons", "env", "gc"
 };
 
 PrimitiveCb jmptable[NUM_PRIMITIVES] =
 {
-  plus, minus, times, div, remain, eq, lt, gt, env
+  plus, minus, times, div, remain, eq, lt, gt, car, cdr, cons, env, gc
 };
 
 int find_primitive(char * name)

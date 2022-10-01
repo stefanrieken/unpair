@@ -185,14 +185,14 @@ Node * transform_elements(Node * els, Node ** env)
 
 Node * transform_expr(Node * expr, Node ** env)
 {
-  if (expr->type < TYPE_ID) return expr;
   if (expr->type == TYPE_ID)
   {
     if (strcmp("define", strval(expr)) == 0) return define_variable(env, expr);
-    if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
     if (strcmp("set!", strval(expr)) == 0) return transform_set(env, expr);
-    // TODO the result of 'quote' should be elevated so as not to make it appear a sub-expression
-    if (strcmp("quote" , strval(expr)) == 0) return element(&memory[expr->next]); // essentially just removing 'quote' again, and saving it from further transformation.
+    if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
+    if (strcmp("quote" , strval(expr)) == 0) return expr; // This one too.
+    // else - find primitive or user defined function
+    return transform_elements(expr, env);
   }
   // else
   return transform_elements(expr, env);

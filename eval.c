@@ -142,8 +142,10 @@ Node * apply(Node * funcexpr, Node ** env)
         if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
+        if(strcmp("quote", strval(func)) == 0) return element(args);
         // else: var or special did not resolve. Maybe should return empty list.
         // Return original expression instead so that you have something to look at in REPL.
+        printf("Runtime error: could not execute id '%s'.\n", strval(func));
         return funcexpr;
         break;
       case TYPE_FUNC:
@@ -153,10 +155,7 @@ Node * apply(Node * funcexpr, Node ** env)
         return run_primitive(env, func, args);
         break;
       default:
-        // The normal way to get here is because 'quote' preserved our list from transformation.
-        // (Then afterwards 'quote' itself was removed from the data stream.)
-        // In this case eval(funcexpr) should also not have done anything.
-        // Nevertheless it is a bit cheeky that 'quote' actually causes these attempts.
+        printf("Runtime erro: can't execute type '%s'.\n", types[func->type]);
         return funcexpr; // not usually reached
         break;
     }
@@ -167,7 +166,7 @@ Node * apply(Node * funcexpr, Node ** env)
 Node * eval(Node * expr, Node ** env)
 {
   if (expr == NULL || expr == NIL) return expr;
-  // if(expr->type == TYPE_ID) return lookup_value((*env), element(expr)); // should be deprecated by:
+  if(expr->type == TYPE_ID) return expr; // Since having variables transformed into TYPE_VAR below, any leftover IDs should be preserved
   if(expr->type == TYPE_VAR) return element(&memory[ memory[expr->value.u32].next ]);
   if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], env);
 

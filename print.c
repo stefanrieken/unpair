@@ -8,7 +8,7 @@
 #include "memory.h"
 #include "primitive.h"
 
-void print_node(Node * node, bool quote_id)
+void print_node(Node * node)
 {
   switch(node->type)
   {
@@ -18,17 +18,16 @@ void print_node(Node * node, bool quote_id)
       break;
     case TYPE_STRING:
     case TYPE_ID:
-      if(quote_id) printf("'");
       printf("%s", strval(node));
       break;
     case TYPE_NODE:
       printf("(");
-      print_node(&memory[node->value.u32], quote_id);
+      print_node(&memory[node->value.u32]);
       printf(")");
       break;
     case TYPE_FUNC:
       printf("(lambda ");
-      print_node(&memory[memory[node->value.u32].next], false);
+      print_node(&memory[memory[node->value.u32].next]);
       printf(")");
       break;
     case TYPE_VAR:
@@ -44,12 +43,12 @@ void print_node(Node * node, bool quote_id)
     if (memory[node->next].element)
     {
       printf(" . ");
-      print_node(&memory[node->next], true);
+      print_node(&memory[node->next]);
     }
     else
     {
       printf(" ");
-      print_node(&memory[node->next], true);
+      print_node(&memory[node->next]);
     }
   }
 }
@@ -61,7 +60,7 @@ void print(Node * node)
   if(node == NIL+1) {printf("#t\n"); return;}
 
   if (!node->element) printf("(");
-  print_node(node, true);
+  print_node(node);
   if (!node->element) printf(")");
   printf("\n");
 }

@@ -80,6 +80,50 @@ Node * parse_nodes()
   return val;
 }
 
+char * escapes = "nrtf";
+char * replacements = "\n\r\t\f";
+int escapes_length = 4;
+
+// assumes opening quote is already parsed
+Node * parse_string()
+{
+  Node * result = new_node(TYPE_STRING, 0);
+
+  int idx = 0;
+
+  char * value_node = NULL;
+  int chars_per_node = sizeof(Node);
+
+  int ch = read_char();
+  while
+  (
+    ch != -1 && ch != 0 && ch != '\"'
+  )
+  {
+    if (ch == '\\')
+    {
+      ch = read_char();
+      for (int i=0; i<escapes_length; i++)
+        if (escapes[i] == ch) { ch = replacements[i]; break; }
+    }
+      
+    if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
+
+    value_node[idx % chars_per_node] = ch;
+    idx++;
+
+    ch = read_char();
+  }
+
+  if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
+  value_node[idx % chars_per_node] = '\0';
+  idx++;
+  result->value.u32 = idx; // set size
+  result->array = true;
+
+  return result;
+}
+
 Node * parse_label(int ch)
 {
   if (ch == -1) return NULL;
@@ -191,6 +235,7 @@ Node * parse_value(int ch)
 
   if(ch == '(') return new_node(TYPE_NODE, parse_nodes() - memory); else
   if (ch == '\'') return parse_quote();
+  if (ch == '\"') return parse_string();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.
 }
 

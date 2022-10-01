@@ -15,6 +15,8 @@ void print_node(Node * node)
     case TYPE_INT: printf("%d", node->value.i32);
       break;
     case TYPE_STRING:
+      printf("\"%s\"", strval(node));
+      break;
     case TYPE_ID:
       printf("%s", strval(node));
       break;

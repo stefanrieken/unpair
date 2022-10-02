@@ -11,7 +11,7 @@ int mark(Node * node)
   node->mark = true;
 
   int marked = 1;
-  if (node->array) marked += 1 + (node->value.u32 / sizeof(Node));
+  if (node->array) marked += num_value_nodes(node);
 
   if (node->type == TYPE_NODE
     || node->type == TYPE_FUNC
@@ -28,11 +28,16 @@ int mark(Node * node)
   return marked;
 }
 
-Node * sweep(Node * freelist, uint32_t start)
+Node * sweep()
 {
-  if (start >= memsize) return freelist;
+  Node * freelist = NIL;
+  int index = 0;
 
-  Node * current = &memory[start];
+  recurse:
+
+  if (index >= memsize) return freelist;
+
+  Node * current = &memory[index];
 
   // Memory debug output
   /*
@@ -56,8 +61,10 @@ Node * sweep(Node * freelist, uint32_t start)
   }
   
   int skip = 1;
-  if (current->array) skip += 1 + (current->value.u32 / sizeof(Node));
-  
-  return sweep(freelist, start+skip);
+  if (current->array) skip += num_value_nodes(current);
+
+  index += skip;
+
+  goto recurse;
 }
 

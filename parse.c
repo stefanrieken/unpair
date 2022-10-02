@@ -87,7 +87,7 @@ int escapes_length = 4;
 // assumes opening quote is already parsed
 Node * parse_string()
 {
-  Node * result = new_node(TYPE_STRING, 0);
+  Node * result = new_array_node(TYPE_STRING, 0);
 
   int idx = 0;
 
@@ -120,14 +120,14 @@ Node * parse_string()
   idx++;
   result->value.u32 = idx; // set size
   result->array = true;
-
-  return result;
+printf("idx: %d\n", idx);
+  return retrofit(result);
 }
 
 Node * parse_label(int ch)
 {
   if (ch == -1) return NULL;
-  Node * result = new_node(TYPE_ID, 0);
+  Node * result = new_array_node(TYPE_ID, 0);
 
   int idx = 0;
 
@@ -140,7 +140,7 @@ Node * parse_label(int ch)
     && !is_whitespace_char(ch)
   )
   {
-    if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
+    if (idx % chars_per_node == 0) value_node = (char *) allocate_node();
 
     value_node[idx % chars_per_node] = ch;
     idx++;
@@ -161,7 +161,6 @@ Node * parse_label(int ch)
     idx++;
     result->value.u32 = idx; // set size
     result->array = true;
-
     return result;
   }
 }
@@ -185,7 +184,7 @@ Node * parse_label_or_number (int c, int radix)
   while (str[i] != 0)
   {
     int intval = str[i++] - '0'; // presently only supporting radices up to 10
-    if (intval < 0 || intval >= radix) return node; // give up
+    if (intval < 0 || intval >= radix) return retrofit(node); // give up
     result = (result * radix) + intval;
   }
   result *= sign;
@@ -193,15 +192,14 @@ Node * parse_label_or_number (int c, int radix)
   // Made it up to here; we have a number!
   // Replace character-array node value with numeric value.
   // Delete any nodes that were used to hold the string value.
-  int num_value_nodes = (node->value.u32 / sizeof(Node)) + 1;
-  memsize -= num_value_nodes;
+  memsize -= num_value_nodes(node);
 
   node->type = TYPE_INT;
   node->array = false;
   if (result > INT32_MAX) node->value.u32 = result;
   else node->value.i32 = result;
   
-  return node;
+  return retrofit(node);
 }
 
 /**
@@ -211,7 +209,7 @@ Node * parse_label_or_number (int c, int radix)
  */
 Node * parse_quote()
 {
-  Node * quote = new_node(TYPE_ID, 6);
+  Node * quote = new_array_node(TYPE_ID, 6);
   char * value = (char *) allocate_node();
   strcpy (value, "quote");
   quote->element = false;

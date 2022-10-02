@@ -10,13 +10,14 @@
 #include "print.h"
 #include "parse.h"
 #include "eval.h"
+#include "gc.h"
 
 #include "transform.h"
 
 // for 1-char args only!
 Node * make_arg(char * arg)
 {
-  Node * argnode = new_node(TYPE_ID, 2);
+  Node * argnode = new_array_node(TYPE_ID, 2);
   char * value = (char *) allocate_node();
   strcpy (value, arg);
   argnode->array = true;
@@ -65,32 +66,36 @@ void make_boolean(Node * slot)
 
 int main(int argc, char ** argv)
 {
-  if (isatty(fileno(stdin))) {
-    printf("\n    **** UNPAIR LISP v1 ****\n");
-    printf("\n %lu BYTE NODE SYSTEM  ALL NODES FREE\n", sizeof(Node));
-    printf("\nREADY.\n");
-  }
-
-
   // Setup
   infile = stdin;
   init_node_memory();
   
   // Make placeholders for false & true
   Node * nil = new_node(TYPE_INT, 0); // must add this because index value zero is used as nil
-  Node * truth = new_node(TYPE_INT, 1);
-  
+  Node * truth = new_node(TYPE_INT, 1);  
   // Fill placeholders (optional functionality; you can comment these out!)
   make_boolean(nil);
   make_boolean(truth);
-
   // ...and start using them!
   Node * env = nil;
+
+  if (isatty(fileno(stdin))) {
+    printf("\n     **** UNPAIR LISP v1 ****\n");
+    printf("\n %lu BYTE NODE SYSTEM %ld NODES USED\n", sizeof(Node), memsize);
+    printf("\nREADY.\n");
+  }
 
   // REPL!
   Node * node;
   do
   {
+    // GC
+    int marked = 0;
+    marked += mark(nil);
+    marked += mark(truth);
+    marked += mark(env);
+    freelist = sweep();
+
     if (isatty(fileno(stdin))) {
       printf("> ");
     }

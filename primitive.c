@@ -126,6 +126,8 @@ Node * env(Node * args, Node ** env)
   return *env;
 }
 
+// Only call this in a top-level expression!
+// (at least until we control our own stack)
 Node * gc(Node * args, Node ** env)
 {
   int marked = 0;
@@ -135,8 +137,9 @@ Node * gc(Node * args, Node ** env)
   // marked += mark(freelist);
   marked += mark(args);
   marked += mark (*env);
-  
-  Node * freelist = sweep(NIL, 0);
+
+  freelist = sweep();
+  int freesize=mem_usage(freelist);
 
   // for now just return garbage stats
   Node * stats = new_node(TYPE_INT, memsize);
@@ -144,7 +147,7 @@ Node * gc(Node * args, Node ** env)
   Node * marked_node = new_node(TYPE_INT, marked);
   marked_node->element = false;
   stats->next = marked_node - memory;
-  Node * swept_node = new_node(TYPE_INT, mem_usage(freelist));
+  Node * swept_node = new_node(TYPE_INT, freesize);
   swept_node->element = false;
   marked_node->next = swept_node - memory;
   return stats;

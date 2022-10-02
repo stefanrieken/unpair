@@ -4,6 +4,6 @@
 #include "node.h"
 
 int mark(Node * node);
-Node * sweep(Node * freelist, uint32_t start);
+Node * sweep();
 
 #endif /*GC_H*/

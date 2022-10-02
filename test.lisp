@@ -5,26 +5,18 @@
 
 (define quad (lambda (y) (* (square y) (square y))))
 
-;; Feel the power of the garbage collector!
-;; Try commenting this call to 'gc' out, and see how
-;; this affects memsize in the later stats.
-;(gc)
-
 '"42 squared is:"
 (square 42)
 '"42 squared squared is:"
 (quad 42)
 
 ;; Lambda-calculus style booleans(!)
-;; "Wow, x is larger than 10!"
-;; "Tsjonge jonge jonge hee"
 (define be-amazed (lambda (x) ((> x 10) "Wow, x is larger than 10!")))
 (be-amazed 20)
 
-;; TODO somehow the gc stats are off by 4 on the first run only
-;; Hint: these are the nodes from the below quoted-list header.
+;; GC; this is now actually also done in the REPL loop
+;; but the call can still be used to get stats.
+;; Do not call from inside a sub-expression!
 '(memsize used free)
-(gc)
-(gc)
 (gc)
 

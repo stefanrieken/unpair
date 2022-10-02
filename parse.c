@@ -120,7 +120,7 @@ Node * parse_string()
   idx++;
   result->value.u32 = idx; // set size
   result->array = true;
-printf("idx: %d\n", idx);
+
   return retrofit(result);
 }
 

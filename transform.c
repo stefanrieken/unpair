@@ -78,6 +78,15 @@
 
 #include "transform.h"
 
+/**
+ * Transform the expressions for define and set! to their eval-time form.
+ */
+Node * transform_if(Node ** env, Node * expr)
+{
+  Node * iff = copy(expr, 0);
+  iff->next = transform_elements(&memory[expr->next], env) - memory;
+  return iff;
+}
 
 /**
  * Transform the expressions for define and set! to their eval-time form.
@@ -191,6 +200,7 @@ Node * transform_expr(Node * expr, Node ** env)
     if (strcmp("set!", strval(expr)) == 0) return transform_set(env, expr);
     if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
     if (strcmp("quote" , strval(expr)) == 0) return expr; // This one too.
+    if (strcmp("if", strval(expr)) == 0) return transform_if(env, expr);
     // else - find primitive or user defined function
     return transform_elements(expr, env);
   }

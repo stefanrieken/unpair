@@ -124,6 +124,17 @@ Node * run_primitive(Node ** env, Node * prim, Node * args)
   return jmptable[prim->value.u32](eval_and_chain(args, env), env);
 }
 
+Node * perform_if (Node ** env, Node *args)
+{
+  Node * result = eval(args, env);
+  // If any of the below is not supplied by the user,
+  // it simply results in a chain of NIL evaluations,
+  // which is what we want anyway.
+  Node * thenn = &memory[args->next];
+  Node * elsse = &memory[thenn->next];
+  if(result == NIL) return eval(elsse, env);
+  else return eval(thenn, env);
+}
 //
 // EVAL / APPLY
 //
@@ -143,6 +154,7 @@ Node * apply(Node * funcexpr, Node ** env)
         if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
         if(strcmp("quote", strval(func)) == 0) return element(args);
+        if(strcmp("if", strval(func)) == 0) return perform_if(env, args);
         // else
         printf("Runtime error: could not execute id '%s'.\n", strval(func));
         return funcexpr;

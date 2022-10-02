@@ -70,3 +70,8 @@ presently evaluated, so that:
         (define x 42)
         ((< 1 2) (set! x 3) (set! x 4) ;; yields '3', but x=4!
 
+This 'feature' disappears when using the special form 'if':
+
+        (define x 42)
+        (if (< 1 2) (set! x 3) (set! x 4)) ;; yields '3'; 'else' is never executed
+

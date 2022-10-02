@@ -20,3 +20,8 @@
 '(memsize used free)
 (gc)
 
+;; Special arg syntax.
+;; Still to do: &rest syntax.
+'"Get all args as one list variable"
+((lambda x x) 1 2 3 4)
+

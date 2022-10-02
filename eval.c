@@ -59,7 +59,12 @@ Node * enclose(Node * env, Node * lambda)
   // Define lambda args as env variables:
   // By chaining them in at front, and the env is
   // naturally extended into the lambda's env.
-  Node * argnames = &memory[lambda->value.u32];
+
+  Node * argnames;
+  if(lambda->type == TYPE_NODE) // usual case: (lambda (x) ...)
+    argnames = &memory[lambda->value.u32];
+  else
+    argnames = element(lambda); // special case: (lambda x ...)
 
   // Define that variables.
   // This is one point to change to support complicated
@@ -88,12 +93,29 @@ Node * enclose(Node * env, Node * lambda)
   return new_node(TYPE_FUNC, closure - memory);
 }
 
+Node * eval_and_chain(Node * args, Node ** env)
+{
+  if (args == NIL) return NIL;
+  Node * result = eval(args, env);
+  result->element = false;
+  result->next = eval_and_chain(&memory[args->next], env) - memory;
+  return result;
+}
+
 Node * run_lambda(Node ** env, Node * expr, Node * args)
 {
   Node * lambda = &memory[expr->value.u32];
 
   Node * lambda_env = &memory[lambda->value.u32];
-  Node * argnames =   &memory[ memory[lambda->next].value.u32 ];
+  
+  bool args_as_list = true; // special case: (lambda x ...)
+  Node * argnames = element(&memory[lambda->next]);
+  if (argnames->type == TYPE_NODE)
+  {
+    args_as_list = false; // usual case: (lambda (x) ...)
+    argnames = &memory[argnames->value.u32];
+  }
+
   Node * body =   &memory[ memory[lambda->next].next ];
   
   while (argnames != NULL && argnames != memory) // aka NIL
@@ -102,21 +124,12 @@ Node * run_lambda(Node ** env, Node * expr, Node * args)
     // but here we just do the lookup.
     // This is the other point to change for &rest support, etc.
     Node * var = lookup(lambda_env, argnames);
-    var->next = eval(args, env) - memory;
+    var->next = (args_as_list ? new_node(TYPE_NODE, idx(eval_and_chain(args, env))) : eval(args, env)) - memory;
     argnames = &memory[argnames->next];
     args = &memory[args->next];
   }
 
   return eval(body, &lambda_env);
-}
-
-Node * eval_and_chain(Node * args, Node ** env)
-{
-  if (args == NIL) return NIL;
-  Node * result = eval(args, env);
-  result->element = false;
-  result->next = eval_and_chain(&memory[args->next], env) - memory;
-  return result;
 }
 
 Node * run_primitive(Node ** env, Node * prim, Node * args)

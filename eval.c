@@ -123,6 +123,7 @@ Node * run_lambda(Node ** env, Node * expr, Node * args)
     // In theory the args should be in a predictable position in the env,
     // but here we just do the lookup.
     // This is the other point to change for &rest support, etc.
+    if (argnames->element) args_as_list = true;
     Node * var = lookup(lambda_env, argnames);
     var->next = (args_as_list ? new_node(TYPE_NODE, idx(eval_and_chain(args, env))) : eval(args, env)) - memory;
     argnames = &memory[argnames->next];

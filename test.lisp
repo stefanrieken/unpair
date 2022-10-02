@@ -21,7 +21,8 @@
 (gc)
 
 ;; Special arg syntax.
-;; Still to do: &rest syntax.
 '"Get all args as one list variable"
 ((lambda x x) 1 2 3 4)
+'"Scheme style &rest notation support"
+((lambda (x y . z) z) 1 2 3 4)
 

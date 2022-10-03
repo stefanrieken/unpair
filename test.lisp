@@ -44,12 +44,14 @@
 (apply 'list 1 2 3)
 (apply 'add 1 2 3)
 
-;; now to get 'let' to work:
-;; (let (a 1) 42) == ((lambda (a) 42) 1)
+(define-syntax cadr
+  (lambda (_ val)
+    (list 'car (list 'cdr val))))
+
 (define-syntax let
   (lambda (bla vars body)
-    (list (list 'lambda (list 'a) 42) 1)
+    (list (list 'lambda (list (car vars)) body) (cadr vars))
 ))
-;; TODO
-;;(let (foo 33) 55)
+
+(let (foo 33) (+ foo foo))
 

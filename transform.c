@@ -191,8 +191,9 @@ Node * macrotransform(Node * expr, Node ** env)
   // Keep executing macros until final form is reached
   while (macro != NIL)
   {
-    print(macros);
-    expr = &memory[run_lambda(env, macro, expr)->value.u32];
+    // Execute common lambda, but make sure it does
+    // not evaluate its args, which are now code (fragments)
+    expr = &memory[run_lambda(env, macro, expr, false)->value.u32];
     macro = mylookup(macros, expr);
   }
   return expr;
@@ -228,7 +229,7 @@ Node * transform_elements(Node * els, Node ** env)
 Node * transform_expr(Node * expr, Node ** env)
 {
   Node * expr2 = macrotransform(expr, env);
-  if (expr2 != expr) {print(expr); expr = expr2;}
+  if (expr2 != expr) {print(expr2); expr = expr2;}
 
   if (expr->type == TYPE_ID)
   {

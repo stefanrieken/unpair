@@ -89,8 +89,6 @@ Node * gt (Node * lhs, Node ** env)
 
 Node * car (Node * val, Node ** env)
 {
-  printf("***");
-  print(val);
   Node * list = &memory[val->value.u32];
   return element(list);
 }

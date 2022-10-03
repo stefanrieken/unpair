@@ -100,7 +100,7 @@ Node * eval_and_chain(Node * args, Node ** env)
   return result;
 }
 
-Node * run_lambda(Node ** env, Node * expr, Node * args)
+Node * run_lambda(Node ** env, Node * expr, Node * args, bool eval_args)
 {
   Node * lambda = &memory[expr->value.u32];
 
@@ -122,7 +122,9 @@ Node * run_lambda(Node ** env, Node * expr, Node * args)
     // but here we just do the lookup.
     if (argnames->element) args_as_list = true; // other special case: (lambda (x y . z) ...)
     Node * var = lookup(lambda_env, argnames);
-    var->next = (args_as_list ? new_node(TYPE_NODE, idx(eval_and_chain(args, env))) : eval(args, env)) - memory;
+
+    if (eval_args) var->next = (args_as_list ? new_node(TYPE_NODE, idx(eval_and_chain(args, env))) : eval(args, env)) - memory;
+    else var->next = (args_as_list ? new_node(TYPE_NODE, idx(args)) : element(args)) - memory;
     argnames = &memory[argnames->next];
     args = &memory[args->next];
   }
@@ -171,7 +173,7 @@ Node * apply(Node * funcexpr, Node ** env)
         return funcexpr;
         break;
       case TYPE_FUNC:
-        return run_lambda(env, func, args);
+        return run_lambda(env, func, args, true);
         break;
       case TYPE_PRIMITIVE:
         return run_primitive(env, func, args);

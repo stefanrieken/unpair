@@ -51,16 +51,27 @@ int resize(Node * node, int oldsize, int newsize)
 
   Node * node2 = node + newsize;
 
+  // This part should in theory be unnecessary, as
+  // the very next thing done is copying in the data.
+  if (newsize > 1)
+  {
+     node->array = true;
+     node->value.u32 = (newsize - 1) * sizeof(Node);
+  }
+  else node->array = false;
+
+  // But this part is required
   if (node2size > 1)
   {
-     node2->array = node2size > 1 ? true : false;
-     node2->value.u32 = oldsize - newsize;
+     node2->array = true;
+     node2->value.u32 = (node2size - 1) * sizeof(Node);
   }
   else node2->array = false;
 
+
   node2->next = node->next;
   node->next = idx(node2);
-  
+
   return newsize;
 }
 

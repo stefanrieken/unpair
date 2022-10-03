@@ -3,6 +3,8 @@
 
 #include "node.h"
 
+extern Node * macros;
+
 Node * transform(Node * expr, Node ** env);
 
 Node * transform_elements(Node * els, Node ** env);

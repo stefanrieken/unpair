@@ -63,6 +63,7 @@ void make_boolean(Node * slot)
   slot->type = TYPE_FUNC;
 }
 
+Node * macros;
 
 int main(int argc, char ** argv)
 {
@@ -77,7 +78,8 @@ int main(int argc, char ** argv)
   make_boolean(nil);
   make_boolean(truth);
   // ...and start using them!
-  Node * env = nil;
+  Node * env = NIL;
+  macros = NIL;
 
   if (isatty(fileno(stdin))) {
     printf("\n     **** UNPAIR LISP v1 ****\n");
@@ -94,6 +96,7 @@ int main(int argc, char ** argv)
     marked += mark(nil);
     marked += mark(truth);
     marked += mark(env);
+    marked += mark(macros);
     freelist = sweep();
 
     if (isatty(fileno(stdin))) {

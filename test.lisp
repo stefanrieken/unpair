@@ -23,6 +23,33 @@
 ;; Special arg syntax.
 '"Get all args as one list variable"
 ((lambda x x) 1 2 3 4)
+(gc)
 '"Scheme style &rest notation support"
 ((lambda (x y . z) z) 1 2 3 4)
+(gc)
+
+;; Macros!
+'"Define 'add' to mean '+' by means of a macro"
+(define-syntax add (lambda (x . y) (cons '+ y)))
+(add 1 2 3)
+
+
+;; defining 'list' doesn't even require a macro... just taking away an indirection(!)
+(define list (lambda x x))
+(list 1 (+ 1 1) (* 3 1))
+
+(define-syntax apply (lambda x (cdr x)))
+;; Works with primitives, user funcs AND user macros
+(apply '+ 1 2 3)
+(apply 'list 1 2 3)
+(apply 'add 1 2 3)
+
+;; now to get 'let' to work:
+;; (let (a 1) 42) == ((lambda (a) 42) 1)
+(define-syntax let
+  (lambda (bla vars body)
+    (list (list 'lambda (list 'a) 42) 1)
+))
+;; TODO
+;;(let (foo 33) 55)
 

@@ -61,6 +61,7 @@ Node * parse_nodes()
     {
       // supporting dotted-pair ('cons') notation.
       Node * cdr = parse_value(read_non_whitespace_char()); // may also end up being a list
+      if (cdr->type == TYPE_NODE) cdr = &memory[cdr->value.u32]; // in which case, use pointer directly, as (a . (b)) == (a b)
       val->next = cdr - memory;
       int ch = read_non_whitespace_char();
       if (ch != ')')
@@ -231,7 +232,7 @@ Node * parse_value(int ch)
     ch = read_non_whitespace_char();
   }
 
-  if(ch == '(') return new_node(TYPE_NODE, parse_nodes() - memory); else
+  if(ch == '(') return new_node(TYPE_NODE, parse_nodes() - memory); // we parse one element here; so if list, wrap into node pointer
   if (ch == '\'') return parse_quote();
   if (ch == '\"') return parse_string();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.

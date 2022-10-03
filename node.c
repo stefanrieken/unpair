@@ -15,7 +15,5 @@ int mem_usage(Node * list)
 {
   if (list == NIL) return 0;
   int len = 1;
-  if (list->array) len += num_value_nodes(list);
-
   return len + mem_usage(&memory[list->next]);
 }

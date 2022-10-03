@@ -114,7 +114,7 @@ Node * run_lambda(Node ** env, Node * expr, Node * args)
     argnames = &memory[argnames->value.u32];
   }
 
-  Node * body =   &memory[ memory[lambda->next].next ];
+  Node * body = &memory[ memory[lambda->next].next ];
   
   while (argnames != NULL && argnames != memory) // aka NIL
   {
@@ -150,7 +150,6 @@ Node * perform_if (Node ** env, Node *args)
 // EVAL / APPLY
 //
 
-
 // Evaluate a list expression, that is, apply function to args.
 Node * apply(Node * funcexpr, Node ** env)
 {
@@ -162,6 +161,7 @@ Node * apply(Node * funcexpr, Node ** env)
     {
       case TYPE_ID:
         if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
+        if (strcmp("define-syntax", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
         if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
         if(strcmp("quote", strval(func)) == 0) return element(args);

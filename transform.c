@@ -77,6 +77,7 @@
 #include "primitive.h"
 
 #include "transform.h"
+#include "eval.h"
 
 /**
  * Transform the expressions for define and set! to their eval-time form.
@@ -91,7 +92,7 @@ Node * transform_if(Node ** env, Node * expr)
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
-Node * transform_set(Node ** env, Node * expr)
+Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
 {
   if (expr->next != 0)
   {
@@ -99,9 +100,9 @@ Node * transform_set(Node ** env, Node * expr)
     Node * value = &memory[name->next]; // may be NIL
 
     Node * expr2 =copy(expr, 0);
-    Node * var = transform_elem(name, env); // does the VAR lookup, or any other applicable shenanigans
+    Node * var = transform_elem(name, def_env); // does the VAR lookup, or any other applicable shenanigans
     var->element = false;
-    Node * val = transform(value, env);
+    Node * val = transform(value, transform_env);
 
     expr2->next = var-memory;
     var->next = val-memory;
@@ -119,7 +120,7 @@ Node * transform_set(Node ** env, Node * expr)
  *
  * Returns the transformed form fur further execution upon 'eval' time.
  */
-Node * define_variable(Node ** env, Node * expr)
+Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
 {
   if (expr->next != 0)
   {
@@ -131,11 +132,11 @@ Node * define_variable(Node ** env, Node * expr)
     // Chain into to environment (at front)
     Node * newval = new_node(TYPE_NODE, name - memory);
     newval->element = false;
-    newval->next = (*env) - memory;
-    (*env) = newval;
+    newval->next = (*def_env) - memory;
+    (*def_env) = newval;
 
     // Change the run-time expression (borrow code for 'set')
-    return transform_set(env, expr);
+    return transform_set(def_env, transform_env, expr);
   }
   // else
   printf ("Compile error: missing variable name in 'set' expression.\n");
@@ -145,7 +146,7 @@ Node * define_variable(Node ** env, Node * expr)
 /**
  * Lookup a variable; return a TYPE_VAR reference, or the original value if not found.
  * (NOTE: the latter only for as long as we allow unresolved labels as values.)
-  */
+ */
 Node * dereference(Node * env, Node * name)
 {
   if(env == NULL || env == NIL)
@@ -163,6 +164,38 @@ Node * as_primitive(Node * label)
   int num = find_primitive(strval(label));
   if (num < 0) return NIL;
   else return new_node(TYPE_PRIMITIVE, num);
+}
+
+extern Node * macros;
+
+// Shameless copy of lookup from eval, for the purpose of macro lookups.
+// Should of course be merged.
+Node * mylookup(Node * env, Node * name)
+{
+  if(env == NULL || env == NIL)
+  {
+     return NIL; // return unresolved label
+  }
+
+  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[memory[env->value.u32].next];
+
+  return mylookup(&memory[env->next], name);
+}
+
+Node * macrotransform(Node * expr, Node ** env)
+{
+  if (macros == NIL) return expr;
+
+  Node * macro = mylookup(macros, expr);
+
+  // Keep executing macros until final form is reached
+  while (macro != NIL)
+  {
+    print(macros);
+    expr = &memory[run_lambda(env, macro, expr)->value.u32];
+    macro = mylookup(macros, expr);
+  }
+  return expr;
 }
 
 Node * transform_elem(Node * elem, Node ** env)
@@ -194,10 +227,14 @@ Node * transform_elements(Node * els, Node ** env)
 
 Node * transform_expr(Node * expr, Node ** env)
 {
+  Node * expr2 = macrotransform(expr, env);
+  if (expr2 != expr) {print(expr); expr = expr2;}
+
   if (expr->type == TYPE_ID)
   {
-    if (strcmp("define", strval(expr)) == 0) return define_variable(env, expr);
-    if (strcmp("set!", strval(expr)) == 0) return transform_set(env, expr);
+    if (strcmp("define", strval(expr)) == 0) return define_variable(env, env, expr);
+    if (strcmp("define-syntax", strval(expr)) == 0) return define_variable(&macros, env, expr);
+    if (strcmp("set!", strval(expr)) == 0) return transform_set(env, env, expr);
     if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
     if (strcmp("quote" , strval(expr)) == 0) return expr; // This one too.
     if (strcmp("if", strval(expr)) == 0) return transform_if(env, expr);

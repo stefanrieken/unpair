@@ -89,6 +89,8 @@ Node * gt (Node * lhs, Node ** env)
 
 Node * car (Node * val, Node ** env)
 {
+  printf("***");
+  print(val);
   Node * list = &memory[val->value.u32];
   return element(list);
 }
@@ -96,7 +98,7 @@ Node * car (Node * val, Node ** env)
 Node * cdr (Node * val, Node ** env)
 {
   Node * list = &memory[val->value.u32];
-  return &memory[list->next];
+  return new_node(TYPE_NODE, list->next);
 }
 
 // Make (copy) a node with car value of arg1,
@@ -115,7 +117,7 @@ Node * cons (Node * list, Node ** env)
   else
     list->next = element(cdr) - memory;
   
-  return list;
+  return new_node(TYPE_NODE, list - memory);
 }
 
 // As per the rules for (no) recursiveness,

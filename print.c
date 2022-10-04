@@ -22,7 +22,7 @@ void print_node(Node * node)
       break;
     case TYPE_NODE:
       printf("(");
-      print_node(&memory[node->value.u32]);
+      if (node->value.u32 != 0) print_node(&memory[node->value.u32]);
       printf(")");
       break;
     case TYPE_FUNC:
@@ -53,14 +53,15 @@ void print_node(Node * node)
   }
 }
 
+// Really is 'print element'
 void print(Node * node)
 {
   if (node == NULL) return; // happens when EOF
   if(node == NIL) {printf("()\n"); return;}
   if(node == NIL+1) {printf("#t\n"); return;}
 
-  if (!node->element) printf("(");
+  //if (node->type == TYPE_NODE) printf("{");
   print_node(node);
-  if (!node->element) printf(")");
+  //if (node->type == TYPE_NODE) printf("}");
   printf("\n");
 }

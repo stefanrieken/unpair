@@ -96,7 +96,12 @@ Node * car (Node * val, Node ** env)
 Node * cdr (Node * val, Node ** env)
 {
   Node * list = &memory[val->value.u32];
-  return new_node(TYPE_NODE, list->next);
+  // don't repackage NIL result into a single pointer-with-type result
+  if (list == NIL) return list;
+
+  Node * result = &memory[list->next];
+  if(result->element) return result; // deconstruct Pair
+  else return new_node(TYPE_NODE, list->next);
 }
 
 // Make (copy) a node with car value of arg1,
@@ -106,16 +111,29 @@ Node * cdr (Node * val, Node ** env)
 // (cons a (b))  => (a b)   -> arg1.next = arg2.value
 // (cons a ())   => (a)     -> arg1.next = arg2.value
 
-Node * cons (Node * list, Node ** env)
+Node * cons (Node * car, Node ** env)
 {
-  Node * cdr = &memory[list->next];
-  list = copy(list, 0);
+  Node * cdr = &memory[car->next];
   if (cdr->type == TYPE_NODE)
-    list->next = cdr->value.u32;
+  {
+    // In-line the sublist
+    car = copy(car, 0);
+    cdr = copy(&memory[cdr->value.u32], 0);
+    //cdr->element = false;
+    car->next = cdr - memory;
+  }
   else
-    list->next = element(cdr) - memory;
+  {
+    // Pretend to be a pair
+    car = copy(car, 1);
+    cdr = &memory[car->next];
+    cdr->element = true;
+  }
   
-  return new_node(TYPE_NODE, list - memory);
+  // Even a single cons cell returned
+  // should be presented as an Element
+  // with type tagging:
+  return new_node(TYPE_NODE, idx(car));
 }
 
 // As per the rules for (no) recursiveness,

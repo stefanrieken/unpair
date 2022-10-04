@@ -72,7 +72,7 @@ int main(int argc, char ** argv)
   init_node_memory();
   
   // Make placeholders for false & true
-  Node * nil = new_node(TYPE_INT, 0); // must add this because index value zero is used as nil
+  Node * nil = new_node(TYPE_NODE, 0); // must add this because index value zero is used as nil
   Node * truth = new_node(TYPE_INT, 1);  
   // Fill placeholders (optional functionality; you can comment these out!)
   make_boolean(nil);

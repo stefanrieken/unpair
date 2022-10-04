@@ -40,7 +40,7 @@ Node * parse_value(int ch);
 Node * parse_nodes()
 {
   int ch = read_non_whitespace_char();
-  if (ch == ')') return memory; // NIL
+  if (ch == ')') return NIL;
 
   // else
   Node * val = parse_value(ch);

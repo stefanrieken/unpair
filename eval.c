@@ -148,6 +148,22 @@ Node * perform_if (Node ** env, Node *args)
   if(result == NIL) return eval(elsse, env);
   else return eval(thenn, env);
 }
+
+Node * run_integer(Node ** env, Node * func, Node * args)
+{
+  // Here's a(nother) novel idea:
+  // (2 '("foo" "bar" "baz")) == "bar"
+  // May or may not be better than implementing ('("foo" "bar" "baz") 2) instead...
+  // Also, count from zero?
+
+  args = eval_and_chain(args, env);
+  Node * list = addr(args->value.u32);
+  int32_t n = func->value.i32;
+  for (int i=1; i<n; i++)
+    list = addr(list->next);
+  return element(list);
+}
+
 //
 // EVAL / APPLY
 //
@@ -155,34 +171,39 @@ Node * perform_if (Node ** env, Node *args)
 // Evaluate a list expression, that is, apply function to args.
 Node * apply(Node * funcexpr, Node ** env)
 {
-    // Allow sub-expression at function name position
-    Node * func = eval(funcexpr, env);
-    Node * args = &memory[funcexpr->next];
+  // Allow sub-expression at function name position
+  Node * func = eval(funcexpr, env);
+  if(func == NIL) return func;
 
-    switch(func->type)
-    {
-      case TYPE_ID:
-        if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
-        if (strcmp("define-syntax", strval(func)) == 0) return set_variable(env, args);
-        if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
-        if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
-        if(strcmp("quote", strval(func)) == 0) return element(args);
-        if(strcmp("if", strval(func)) == 0) return perform_if(env, args);
-        // else
-        printf("Runtime error: could not execute id '%s'.\n", strval(func));
-        return funcexpr;
-        break;
-      case TYPE_FUNC:
-        return run_lambda(env, func, args, true);
-        break;
-      case TYPE_PRIMITIVE:
-        return run_primitive(env, func, args);
-        break;
-      default:
-        printf("Runtime error: can't execute type '%s'.\n", types[func->type]);
-        return funcexpr; // not usually reached
-        break;
-    }
+  Node * args = &memory[funcexpr->next];
+
+  switch(func->type)
+  {
+    case TYPE_INT:
+      return run_integer(env, func, args);
+      break;
+    case TYPE_ID:
+      if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
+      if (strcmp("define-syntax", strval(func)) == 0) return set_variable(env, args);
+      if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
+      if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
+      if(strcmp("quote", strval(func)) == 0) return element(args);
+      if(strcmp("if", strval(func)) == 0) return perform_if(env, args);
+      // else
+      printf("Runtime error: could not execute id '%s'.\n", strval(func));
+      return funcexpr;
+      break;
+    case TYPE_FUNC:
+      return run_lambda(env, func, args, true);
+      break;
+    case TYPE_PRIMITIVE:
+      return run_primitive(env, func, args);
+      break;
+    default:
+      printf("Runtime error: can't execute type '%s'.\n", types[func->type]);
+      return funcexpr; // not usually reached
+      break;
+  }
 }
 
 // Evaluate a single node, ignoring that it may be inside a list -

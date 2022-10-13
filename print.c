@@ -15,9 +15,12 @@ void print_node(Node * node)
     case TYPE_INT: printf("%d", node->value.i32);
       break;
     case TYPE_CHAR:
-      // In practice we mainly use this in array form,
-      // but print doesn't support this yet.
-      printf("'%uc'", (unsigned char) node->value.u32);
+      if(node->array)
+      {
+        printf("[%s]", strval(node));
+      }
+      else
+        printf("'%uc'", (unsigned char) node->value.u32);
       break;
     case TYPE_STRING:
       printf("\"%s\"", strval(&memory[node->value.u32]));

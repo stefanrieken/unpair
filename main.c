@@ -14,21 +14,40 @@
 
 #include "transform.h"
 
+Node * macros;
+Node * unique_strings;
+
 // Only makes small values!
 Node * make_char_array_node(char * val)
 {
-  Node * quote = new_array_node(TYPE_CHAR, 6);
+  Node * node = new_array_node(TYPE_CHAR, strlen(val)+1);
   char * value = (char *) allocate_node();
   strcpy (value, val);
-  quote->element = false;
-  quote->array = true;
-  return quote;
+  node->element = false;
+  node->array = true;
+  return node;
+}
+
+Node * unique_small_string(char * val)
+{
+  Node * where = unique_strings;
+  while (where != NIL)
+  {
+    if(strcmp(val, strval(where)) == 0)
+      return where;
+    where = &memory[where->next];
+  }
+  // Not found: make
+  where = make_char_array_node(val);
+  where->next = unique_strings - memory;
+  unique_strings = retrofit(where);
+  return unique_strings;
 }
 
 // for 1-char args only!
 Node * make_arg(char * arg)
 {
-  return new_node(TYPE_ID, make_char_array_node(arg) - memory);
+  return new_node(TYPE_ID, unique_small_string(arg) - memory);
 }
 
 Node * def_arg(Node * env, Node * name);
@@ -70,10 +89,6 @@ void make_boolean(Node * slot)
   slot->type = TYPE_FUNC;
 }
 
-Node * macros;
-
-Node * quote_string;
-
 int main(int argc, char ** argv)
 {
   // Setup
@@ -83,13 +98,13 @@ int main(int argc, char ** argv)
   // Make placeholders for false & true
   Node * nil = new_node(TYPE_NODE, 0); // must add this because index value zero is used as nil
   Node * truth = new_node(TYPE_INT, 1);  
+  // ...and start using them!
+  Node * env = nil;
+  macros = nil;
+  unique_strings = nil;
   // Fill placeholders (optional functionality; you can comment these out!)
   make_boolean(nil);
   make_boolean(truth);
-  // ...and start using them!
-  Node * env = NIL;
-  macros = NIL;
-  quote_string = make_char_array_node("quote");
 
   if (isatty(fileno(stdin))) {
     printf("\n     **** UNPAIR LISP v1 ****\n");
@@ -107,7 +122,7 @@ int main(int argc, char ** argv)
     marked += mark(truth);
     marked += mark(env);
     marked += mark(macros);
-    marked += mark(quote_string);
+    marked += mark(unique_strings);
     freelist = sweep();
 
     if (isatty(fileno(stdin))) {

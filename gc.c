@@ -24,7 +24,7 @@ int mark(Node * node)
     marked += mark(&memory[node->value.u32]);
   }
 
-  if (!node->element)
+  if (node->next != 0)
     marked += mark(&memory[node->next]);
   
   return marked;

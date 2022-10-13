@@ -6,6 +6,7 @@
 
 #include "node.h"
 #include "memory.h"
+#include "print.h"
 
 //
 // MEMORY
@@ -159,7 +160,7 @@ Node * retrofit (Node * node)
   
   if (size_available == size_required)
   {
-    //printf("Retrofitting; size=%d\n", size_required);
+    //printf("Retrofitting; size=%d\n", size_required);print(node);
     if (before != NIL) before->next = available->next; // unchain result from freelist
     else  freelist = &memory[freelist->next]; // at start of freelist; just move it one up
 

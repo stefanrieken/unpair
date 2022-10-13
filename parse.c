@@ -6,6 +6,7 @@
 
 #include "memory.h"
 #include "parse.h"
+#include "print.h"
 
 int buffer = -2;
 
@@ -88,7 +89,7 @@ int escapes_length = 4;
 // assumes opening quote is already parsed
 Node * parse_string()
 {
-  Node * result = new_array_node(TYPE_STRING, 0);
+  Node * result = new_array_node(TYPE_CHAR, 0);
 
   int idx = 0;
 
@@ -122,13 +123,15 @@ Node * parse_string()
   result->value.u32 = idx; // set size
   result->array = true;
 
-  return retrofit(result);
+  // Now add pointer to String result
+  result = retrofit(result);
+  return new_node(TYPE_STRING, result - memory);
 }
 
 Node * parse_label(int ch)
 {
   if (ch == -1) return NULL;
-  Node * result = new_array_node(TYPE_ID, 0);
+  Node * result = new_array_node(TYPE_CHAR, 0);
 
   int idx = 0;
 
@@ -154,16 +157,16 @@ Node * parse_label(int ch)
     printf("Parse error: expected label; got '%c'.\n", ch);
     return &memory[0];
   }
-  else
-  {
-    unread(ch);
-    if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
-    value_node[idx % chars_per_node] = '\0';
-    idx++;
-    result->value.u32 = idx; // set size
-    result->array = true;
-    return result;
-  }
+  // else
+  unread(ch);
+  if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
+  value_node[idx % chars_per_node] = '\0';
+  idx++;
+  result->value.u32 = idx; // set size
+  
+  // Don't return as pointer to char array here;
+  // this result gets post-processed by parse_label_or_number
+  return result;
 }
 
 Node * parse_label_or_number (int c, int radix)
@@ -185,7 +188,15 @@ Node * parse_label_or_number (int c, int radix)
   while (str[i] != 0)
   {
     int intval = str[i++] - '0'; // presently only supporting radices up to 10
-    if (intval < 0 || intval >= radix) return retrofit(node); // give up
+
+    if (intval < 0 || intval >= radix)
+    {
+      // Give up trying to parse label as int;
+      // Return label as pointer to char array
+      node = retrofit(node);
+      return new_node(TYPE_ID, node - memory);
+    }
+
     result = (result * radix) + intval;
   }
   result *= sign;
@@ -199,7 +210,7 @@ Node * parse_label_or_number (int c, int radix)
   node->array = false;
   if (result > INT32_MAX) node->value.u32 = result;
   else node->value.i32 = result;
-  
+
   return retrofit(node);
 }
 
@@ -208,13 +219,11 @@ Node * parse_label_or_number (int c, int radix)
  * I'm sure that this ought to be a common label plus a LISP macro,
  * but pending a macro system it is of some value to have it built in.
  */
+extern Node * quote_string;
 Node * parse_quote()
 {
-  Node * quote = new_array_node(TYPE_ID, 6);
-  char * value = (char *) allocate_node();
-  strcpy (value, "quote");
+  Node * quote = new_node(TYPE_ID, quote_string - memory);
   quote->element = false;
-  quote->array = true;
 
   Node * val = parse();
   val->element = false;

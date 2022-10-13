@@ -205,7 +205,7 @@ Node * copy(Node * node, int n_recurse)
   if (n_recurse > 0 && node->next != 0)
     result->next = copy(&memory[node->next], n_recurse-1) - memory;
   else
-    result->next = 0;
+    result->next = 0; // TODO this is unexpected behaviour in some cases
 
   // Only try retrofit if we know the result is at top of memory!
   if (node->array) return retrofit(result);

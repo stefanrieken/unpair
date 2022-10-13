@@ -21,7 +21,14 @@ Node * lookup(Node * env, Node * name)
     return NIL; // by means of recovery??
   }
 
-  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[env->value.u32];
+  // Presently we may have two different char arrays pointing
+  // to the same string value. Unwrapping both here is slow, but
+  // once we have unique strings we should be able to revert
+  // this code without too much ado.
+  Node * envnode = &memory[env->value.u32];
+  char * envstr = strval(&memory[envnode->value.u32]);
+  char * namestr = strval(&memory[name->value.u32]);
+  if(strcmp(namestr, envstr) == 0) return &memory[env->value.u32];
   return lookup(&memory[env->next], name);
 }
 
@@ -177,18 +184,21 @@ Node * apply(Node * funcexpr, Node ** env)
 
   Node * args = &memory[funcexpr->next];
 
+  char * chars;
+
   switch(func->type)
   {
     case TYPE_INT:
       return run_integer(env, func, args);
       break;
     case TYPE_ID:
-      if(strcmp("define", strval(func)) == 0) return set_variable(env, args);
-      if (strcmp("define-syntax", strval(func)) == 0) return set_variable(env, args);
-      if(strcmp("set!", strval(func)) == 0) return set_variable(env, args);
-      if(strcmp("lambda", strval(func)) == 0) return enclose((*env), args);
-      if(strcmp("quote", strval(func)) == 0) return element(args);
-      if(strcmp("if", strval(func)) == 0) return perform_if(env, args);
+      chars = strval(&memory[func->value.u32]);
+      if(strcmp("define", chars) == 0) return set_variable(env, args);
+      if (strcmp("define-syntax", chars) == 0) return set_variable(env, args);
+      if(strcmp("set!", chars) == 0) return set_variable(env, args);
+      if(strcmp("lambda", chars) == 0) return enclose((*env), args);
+      if(strcmp("quote", chars) == 0) return element(args);
+      if(strcmp("if", chars) == 0) return perform_if(env, args);
       // else
       printf("Runtime error: could not execute id '%s'.\n", strval(func));
       return funcexpr;
@@ -212,7 +222,7 @@ Node * eval(Node * expr, Node ** env)
 {
   if (expr == NULL || expr == NIL) return expr;
   if(expr->type == TYPE_ID) return expr; // Since having variables transformed into TYPE_VAR below, any leftover IDs should be preserved
-  if(expr->type == TYPE_VAR) return element(&memory[ memory[expr->value.u32].next ]);
+  if(expr->type == TYPE_VAR) return element(&memory[ memory[expr->value.u32].next ]); // Get the value part of the VAR
   if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], env);
 
   return element(expr);

@@ -14,11 +14,16 @@ void print_node(Node * node)
   {
     case TYPE_INT: printf("%d", node->value.i32);
       break;
+    case TYPE_CHAR:
+      // In practice we mainly use this in array form,
+      // but print doesn't support this yet.
+      printf("'%uc'", (unsigned char) node->value.u32);
+      break;
     case TYPE_STRING:
-      printf("\"%s\"", strval(node));
+      printf("\"%s\"", strval(&memory[node->value.u32]));
       break;
     case TYPE_ID:
-      printf("%s", strval(node));
+      printf("%s", strval(&memory[node->value.u32]));
       break;
     case TYPE_NODE:
       printf("(");
@@ -31,7 +36,7 @@ void print_node(Node * node)
       printf(")");
       break;
     case TYPE_VAR:
-      printf("%s", strval(&memory[node->value.u32]));
+      printf("%s", strval(&memory[memory[node->value.u32].value.u32]));
       break;
     case TYPE_PRIMITIVE:
       printf("%s", primitives[node->value.u32]);
@@ -41,15 +46,10 @@ void print_node(Node * node)
   if (!node->element && !node->next == 0)
   {
     if (memory[node->next].element)
-    {
       printf(" . ");
-      print_node(&memory[node->next]);
-    }
-    else
-    {
-      printf(" ");
-      print_node(&memory[node->next]);
-    }
+    else printf(" ");
+
+    print_node(&memory[node->next]);
   }
 }
 

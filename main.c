@@ -14,14 +14,21 @@
 
 #include "transform.h"
 
+// Only makes small values!
+Node * make_char_array_node(char * val)
+{
+  Node * quote = new_array_node(TYPE_CHAR, 6);
+  char * value = (char *) allocate_node();
+  strcpy (value, val);
+  quote->element = false;
+  quote->array = true;
+  return quote;
+}
+
 // for 1-char args only!
 Node * make_arg(char * arg)
 {
-  Node * argnode = new_array_node(TYPE_ID, 2);
-  char * value = (char *) allocate_node();
-  strcpy (value, arg);
-  argnode->array = true;
-  return argnode;
+  return new_node(TYPE_ID, make_char_array_node(arg) - memory);
 }
 
 Node * def_arg(Node * env, Node * name);
@@ -65,6 +72,8 @@ void make_boolean(Node * slot)
 
 Node * macros;
 
+Node * quote_string;
+
 int main(int argc, char ** argv)
 {
   // Setup
@@ -80,6 +89,7 @@ int main(int argc, char ** argv)
   // ...and start using them!
   Node * env = NIL;
   macros = NIL;
+  quote_string = make_char_array_node("quote");
 
   if (isatty(fileno(stdin))) {
     printf("\n     **** UNPAIR LISP v1 ****\n");
@@ -97,6 +107,7 @@ int main(int argc, char ** argv)
     marked += mark(truth);
     marked += mark(env);
     marked += mark(macros);
+    marked += mark(quote_string);
     freelist = sweep();
 
     if (isatty(fileno(stdin))) {

@@ -106,7 +106,7 @@ Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
 
     expr2->next = var-memory;
     var->next = val-memory;
-    
+
     return expr2;
   }
   // else
@@ -139,7 +139,7 @@ Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
     return transform_set(def_env, transform_env, expr);
   }
   // else
-  printf ("Compile error: missing variable name in 'set' expression.\n");
+  printf ("Compile error: missing variable name in 'define' expression.\n");
   return NULL;
 }
 
@@ -154,14 +154,19 @@ Node * dereference(Node * env, Node * name)
      return NIL; // return unresolved label
   }
 
-  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return new_node(TYPE_VAR, env->value.u32);
+  // As in Lookup, we inefficiently check char arrays here
+  // until the pointers can be uniquely compared
+  Node * envnode = &memory[env->value.u32];
+  char * envstr = strval(&memory[envnode->value.u32]);
+  char * namestr = strval(&memory[name->value.u32]);
+  if(strcmp(namestr, envstr) == 0) return new_node(TYPE_VAR, env->value.u32);
 
   return dereference(&memory[env->next], name);
 }
 
 Node * as_primitive(Node * label)
 {
-  int num = find_primitive(strval(label));
+  int num = find_primitive(strval(&memory[label->value.u32]));
   if (num < 0) return NIL;
   else return new_node(TYPE_PRIMITIVE, num);
 }
@@ -177,7 +182,14 @@ Node * mylookup(Node * env, Node * name)
      return NIL; // return unresolved label
   }
 
-  if(strcmp(strval(name), strval(&memory[env->value.u32])) == 0) return &memory[memory[env->value.u32].next];
+  // Presently we may have two different char arrays pointing
+  // to the same string value. Unwrapping both here is slow, but
+  // once we have unique strings we should be able to revert
+  // this code without too much ado.
+  Node * envnode = &memory[env->value.u32];
+  char * envstr = strval(&memory[envnode->value.u32]);
+  char * namestr = strval(&memory[name->value.u32]);
+  if(strcmp(namestr, envstr) == 0) return &memory[memory[env->value.u32].next];
 
   return mylookup(&memory[env->next], name);
 }
@@ -203,9 +215,12 @@ Node * transform_elem(Node * elem, Node ** env)
 {
   if (elem->type == TYPE_ID)
   {
+    // Lookup the value location in memory by name,
+    // returning a TYPE_VAR.
+    // TODO this is where recursive calls go awry
     Node * result = dereference(*env, elem);
     if (result == NIL) result = as_primitive(elem);
-    if (result == NIL) printf("Compilation error: '%s' not found.\n", strval(elem));
+    if (result == NIL) {print(*env); printf("Compilation error: '%s' not found.\n", strval(&memory[elem->value.u32])); }
     return result;
   }
   else if (elem->type == TYPE_NODE)
@@ -229,16 +244,23 @@ Node * transform_elements(Node * els, Node ** env)
 Node * transform_expr(Node * expr, Node ** env)
 {
   Node * expr2 = macrotransform(expr, env);
-  if (expr2 != expr) {print(expr2); expr = expr2;}
+
+  if (expr2 != expr)
+  {
+    //print(expr2); // I guess to properly print the node it should be wrapped into an element first
+    expr = expr2;
+  }
 
   if (expr->type == TYPE_ID)
   {
-    if (strcmp("define", strval(expr)) == 0) return define_variable(env, env, expr);
-    if (strcmp("define-syntax", strval(expr)) == 0) return define_variable(&macros, env, expr);
-    if (strcmp("set!", strval(expr)) == 0) return transform_set(env, env, expr);
-    if (strcmp("lambda", strval(expr)) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
-    if (strcmp("quote" , strval(expr)) == 0) return expr; // This one too.
-    if (strcmp("if", strval(expr)) == 0) return transform_if(env, expr);
+    // Still have to compare strings until labels are unique in memory
+    char * chars = strval(&memory[expr->value.u32]);
+    if (strcmp("define", chars) == 0) return define_variable(env, env, expr);
+    if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, env, expr);
+    if (strcmp("set!", chars) == 0) return transform_set(env, env, expr);
+    if (strcmp("lambda", chars) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
+    if (strcmp("quote" , chars) == 0) return expr; // This one too.
+    if (strcmp("if", chars) == 0) return transform_if(env, expr);
     // else - find primitive or user defined function
     return transform_elements(expr, env);
   }

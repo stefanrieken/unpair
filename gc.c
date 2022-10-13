@@ -13,7 +13,9 @@ int mark(Node * node)
   int marked = 1;
   if (node->array) marked += num_value_nodes(node);
 
-  if (node->type == TYPE_NODE
+  if (node->type == TYPE_ID
+    || node->type == TYPE_STRING
+    || node->type == TYPE_NODE
     || node->type == TYPE_FUNC
     || node->type == TYPE_VAR)
   {

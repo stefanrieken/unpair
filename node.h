@@ -5,8 +5,9 @@
 
 typedef enum Type {
   TYPE_INT,
-  TYPE_STRING,   // technically, 'char'; but it makes little sense outside of a char array aka string
-  TYPE_ID,       // = label
+  TYPE_CHAR,     // Character array,  to which String and ID (Label) point
+  TYPE_STRING,  // technically, 'char'; but it makes little sense outside of a char array aka string
+  TYPE_ID,      // = label
   TYPE_NODE,     // = node pointer
   TYPE_FUNC,     // = closure (transformed lambda)
   TYPE_VAR,      // references the FULL (name val) entry for pre-dereferenced variables.
@@ -32,6 +33,8 @@ typedef struct Node {
 
 
 #define strval(node) ((char*) (node + 1))
+#define intarray(node) ((int32_t *) (node + 1))
+#define uintarray(node) ((uint32_t *) (node + 1))
 
 int mem_usage(Node * list);
 

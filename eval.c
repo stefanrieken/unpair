@@ -12,27 +12,6 @@
 // ...because we didn't do it before:
 #include "transform.h"
 
-Node * lookup(Node * env, Node * name)
-{
-  if(env == NULL || env == NIL)
-  {
-    // This should be normally caught as a compile time error
-    printf("Runtime error: cannot find variable '%s'\n", strval(name));
-    return NIL; // by means of recovery??
-  }
-
-  // Presently we may have two different char arrays pointing
-  // to the same string value. Unwrapping both here is slow, but
-  // once we have unique strings we should be able to revert
-  // this code without too much ado.
-  Node * envnode = &memory[env->value.u32];
-  char * envstr = strval(&memory[envnode->value.u32]);
-  char * namestr = strval(&memory[name->value.u32]);
-  if(strcmp(namestr, envstr) == 0) return &memory[env->value.u32];
-  return lookup(&memory[env->next], name);
-}
-
-
 Node * set_variable(Node ** env, Node * expr)
 {
   Node * var = &memory[expr->value.u32]; // no longer: lookup(*env, expr);

@@ -46,7 +46,7 @@ void print_node(Node * node)
       break;
   }
 
-  if (!node->element && !node->next == 0)
+  if (node->next != 0)
   {
     if (memory[node->next].element)
       printf(" . ");

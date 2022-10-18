@@ -228,3 +228,65 @@ Node * element(Node * node)
   return node;
 }
 
+/**
+ * Returns the 'raw' 'env' entry, to be refined by the specializations below.
+ */
+Node * lookup_internal(Node * env, Node * name)
+{
+  while (env != NULL && env != NIL)
+  {
+    Node * envnode = &memory[env->value.u32];
+    // Thanks to unique label character arrays, we can now just compare pointers here
+    if (envnode->value.u32 == name->value.u32) return env;
+
+    env = &memory[env->next];
+  }
+
+  // Return either NULL if no env; or NIL if not found
+  return env;
+}
+
+/**
+ * Lookup a variable. Return NIL if not found.
+ */
+Node * lookup(Node * env, Node * name)
+{
+  Node * result = lookup_internal(env, name);
+  if(result == NULL || result == NIL)
+  {
+    // This should be normally caught as a compile time error
+    printf("Runtime error: cannot find variable '%s'\n", strval(name));
+    return NIL; // by means of recovery??
+  }
+  // else
+  return &memory[result->value.u32];
+}
+
+
+/**
+ * Lookup a variable; return a TYPE_VAR reference, or NIL if not found.
+ *
+ * NOTE: presently the TYPE_VAR reference is a bit of a silly wrapper around the
+ * variable in memory. The longer-term goal is to encode TYPE_VAR in such a way
+ * that the actual variable can be found quickly even in dynamic memory circumstances;
+ * e.g. x = 0,1 for variable idx 1 in the top-level env.
+ */
+Node * dereference(Node * env, Node * name)
+{
+  Node * result = lookup_internal(env, name);
+  if(result == NULL || result == NIL) return NIL; // return unresolved label
+  // else
+  return new_node(TYPE_VAR, result->value.u32);
+
+}
+
+// Shameless copy of lookup from eval, for the purpose of macro lookups.
+// Should of course be (further) merged.
+Node * find_macro(Node * env, Node * name)
+{
+  Node * result = lookup_internal(env, name);
+  if(result == NULL || result == NIL) return NIL; // return unresolved label
+  // else
+  return &memory[memory[result->value.u32].next];
+}
+

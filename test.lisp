@@ -1,7 +1,6 @@
 
 ;; Lambda definitions
 (define square (lambda (x) (* x x)))
-(gc)
 
 (define quad (lambda (y) (* (square y) (square y))))
 
@@ -14,19 +13,12 @@
 (define be-amazed (lambda (x) ((> x 10) "Wow, x is larger than 10!")))
 (be-amazed 20)
 
-;; GC; this is now actually also done in the REPL loop
-;; but the call can still be used to get stats.
-;; Do not call from inside a sub-expression!
-'(memsize used free)
-(gc)
-
 ;; Special arg syntax.
 '"Get all args as one list variable"
 ((lambda x x) 1 2 3 4)
-(gc)
+
 '"Scheme style &rest notation support"
 ((lambda (x y . z) z) 1 2 3 4)
-(gc)
 
 '"Novel list index"
 ;; could also have been ('("a" "b" "c") 2)

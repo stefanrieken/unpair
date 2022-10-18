@@ -106,6 +106,7 @@ Node * unique_string(Node * val)
     }
     where = &memory[where->next];
   }
+
   // Not found: use given node;
   // Call 'retrofit' now that we know we can afford it
   val->next = unique_strings - memory;

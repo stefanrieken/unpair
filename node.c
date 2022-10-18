@@ -3,6 +3,7 @@
 
 char * types[] = {
   "int",
+  "char",
   "string",
   "id",
   "node",

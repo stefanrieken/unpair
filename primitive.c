@@ -144,43 +144,16 @@ Node * env(Node * args, Node ** env)
   return *env;
 }
 
-// Only call this in a top-level expression!
-// (at least until we control our own stack)
-Node * gc(Node * args, Node ** env)
-{
-  int marked = 0;
-  // This is all we can reach from here... it should suffice
-  marked += mark(NIL);
-  marked += mark(NIL+1); // true
-  // marked += mark(freelist);
-  marked += mark(args);
-  marked += mark (*env);
-
-  freelist = sweep();
-  int freesize=mem_usage(freelist);
-
-  // for now just return garbage stats
-  Node * stats = new_node(TYPE_INT, memsize);
-  stats->element = false;
-  Node * marked_node = new_node(TYPE_INT, marked);
-  marked_node->element = false;
-  stats->next = marked_node - memory;
-  Node * swept_node = new_node(TYPE_INT, freesize);
-  swept_node->element = false;
-  marked_node->next = swept_node - memory;
-  return stats;
-}
-
-#define NUM_PRIMITIVES 13
+#define NUM_PRIMITIVES 12
 
 char * primitives[NUM_PRIMITIVES] =
 {
-  "+", "-", "*", "/", "%", "=", "<", ">", "car", "cdr", "cons", "env", "gc"
+  "+", "-", "*", "/", "%", "=", "<", ">", "car", "cdr", "cons", "env"
 };
 
 PrimitiveCb jmptable[NUM_PRIMITIVES] =
 {
-  plus, minus, times, div, remain, eq, lt, gt, car, cdr, cons, env, gc
+  plus, minus, times, div, remain, eq, lt, gt, car, cdr, cons, env
 };
 
 int find_primitive(char * name)

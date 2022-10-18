@@ -143,27 +143,6 @@ Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
   return NULL;
 }
 
-/**
- * Lookup a variable; return a TYPE_VAR reference, or the original value if not found.
- * (NOTE: the latter only for as long as we allow unresolved labels as values.)
- */
-Node * dereference(Node * env, Node * name)
-{
-  if(env == NULL || env == NIL)
-  {
-     return NIL; // return unresolved label
-  }
-
-  // As in Lookup, we inefficiently check char arrays here
-  // until the pointers can be uniquely compared
-  Node * envnode = &memory[env->value.u32];
-  char * envstr = strval(&memory[envnode->value.u32]);
-  char * namestr = strval(&memory[name->value.u32]);
-  if(strcmp(namestr, envstr) == 0) return new_node(TYPE_VAR, env->value.u32);
-
-  return dereference(&memory[env->next], name);
-}
-
 Node * as_primitive(Node * label)
 {
   int num = find_primitive(strval(&memory[label->value.u32]));
@@ -173,32 +152,11 @@ Node * as_primitive(Node * label)
 
 extern Node * macros;
 
-// Shameless copy of lookup from eval, for the purpose of macro lookups.
-// Should of course be merged.
-Node * mylookup(Node * env, Node * name)
-{
-  if(env == NULL || env == NIL)
-  {
-     return NIL; // return unresolved label
-  }
-
-  // Presently we may have two different char arrays pointing
-  // to the same string value. Unwrapping both here is slow, but
-  // once we have unique strings we should be able to revert
-  // this code without too much ado.
-  Node * envnode = &memory[env->value.u32];
-  char * envstr = strval(&memory[envnode->value.u32]);
-  char * namestr = strval(&memory[name->value.u32]);
-  if(strcmp(namestr, envstr) == 0) return &memory[memory[env->value.u32].next];
-
-  return mylookup(&memory[env->next], name);
-}
-
 Node * macrotransform(Node * expr, Node ** env)
 {
   if (macros == NIL) return expr;
 
-  Node * macro = mylookup(macros, expr);
+  Node * macro = find_macro(macros, expr);
 
   // Keep executing macros until final form is reached
   while (macro != NIL)
@@ -206,7 +164,7 @@ Node * macrotransform(Node * expr, Node ** env)
     // Execute common lambda, but make sure it does
     // not evaluate its args, which are now code (fragments)
     expr = &memory[run_lambda(env, macro, expr, false)->value.u32];
-    macro = mylookup(macros, expr);
+    macro = find_macro(macros, expr);
   }
   return expr;
 }

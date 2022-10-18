@@ -41,6 +41,15 @@ Node * retrofit (Node * node);
  */
 Node * element(Node * node);
 
+//
+// 'env' functions put here
+//
+Node * lookup(Node * env, Node * name);
+Node * dereference(Node * env, Node * name);
+Node * find_macro(Node * env, Node * name);
+
+
+
 // NIL == &memory[0]
 #define NIL memory
 

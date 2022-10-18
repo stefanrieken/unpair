@@ -12,9 +12,14 @@ char * types[] = {
   "primitive"
 };
 
+int length(Node * list)
+{
+  if (list == NIL) return 0;
+  return 1 + length(&memory[list->next]);
+}
+
 int mem_usage(Node * list)
 {
   if (list == NIL) return 0;
-  int len = 1;
-  return len + mem_usage(&memory[list->next]);
+  return 1 + mem_usage(&memory[list->next]);
 }

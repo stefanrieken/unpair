@@ -127,10 +127,16 @@ Node * new_node(Type type, uint32_t value)
 
 /**
  * Return a stretchable node at end of memory.
+ * Allocates the node space required to host the amount of bytes
+ * marked by 'value'.
  */
 Node * new_array_node(Type type, uint32_t value)
 {
-  return init_node(allocate_node(), type, value, true);
+  Node * result = init_node(allocate_node(), type, value, true);
+  // Allocate any overflow nodes
+  for (int i=0; i< num_value_nodes(result); i++)
+    allocate_node();
+  return result;
 }
 
 // Try to move the last created note into an existing slot.
@@ -195,13 +201,9 @@ Node * copy(Node * node, int n_recurse)
   // we can for now try to retrofit the result.
   Node * result = node->array ? new_array_node(node->type, node->value.u32) : new_node(node->type, node->value.u32);
 
-  // Allocate any overflow nodes
-  int num_nodes = 0;
-  if (node->array) num_nodes = num_value_nodes(node);
-  for (int i=0; i< num_nodes; i++)
-    allocate_node();
-
-  memcpy(result, node, sizeof(Node) * (num_nodes+1));
+  int num_nodes = 1;
+  if (node->array) num_nodes += num_value_nodes(node);
+  memcpy(result, node, sizeof(Node) * num_nodes);
 
   if (n_recurse > 0 && node->next != 0)
     result->next = copy(&memory[node->next], n_recurse-1) - memory;

@@ -40,7 +40,6 @@ Node * enclose(Node * env, Node * lambda)
 {
   // Input: ((arglist) body-expr)
   // Result: ((env) (args) (transformed-body)
-  // May be: ((env) (n-args) body))
 
   // Define lambda args as env variables:
   // By chaining them in at front, and the env is

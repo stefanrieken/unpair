@@ -17,11 +17,10 @@
 Node * macros;
 Node * unique_strings;
 
-// Only makes small values!
 Node * make_char_array_node(char * val)
 {
   Node * node = new_array_node(TYPE_CHAR, strlen(val)+1);
-  char * value = (char *) allocate_node();
+  char * value = strval(node);
   strcpy (value, val);
   node->element = false;
   node->array = true;

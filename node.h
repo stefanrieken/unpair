@@ -35,6 +35,7 @@ typedef struct Node {
 #define strval(node) ((char*) (node + 1))
 #define intarray(node) ((int32_t *) (node + 1))
 #define uintarray(node) ((uint32_t *) (node + 1))
+#define nodearray(node) ((Node *) (node + 1))
 
 int length(Node * list);
 int mem_usage(Node * list);

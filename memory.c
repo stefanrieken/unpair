@@ -71,7 +71,7 @@ int resize(Node * node, int oldsize, int newsize)
 
 
   node2->next = node->next;
-  node->next = idx(node2);
+  node->next = index(node2);
 
   return newsize;
 }
@@ -107,7 +107,7 @@ Node * new_node(Type type, uint32_t value)
   while (reclaimable != NIL && reclaimable->array)
   {
     before = reclaimable;
-    reclaimable = addr(reclaimable->next);
+    reclaimable = pointer(reclaimable->next);
   }
 
   //return init_node(allocate_node(), type, value);
@@ -115,9 +115,9 @@ Node * new_node(Type type, uint32_t value)
   Node * result;
   if (reclaimable != NIL)
   {
-    //printf("Reclaiming %ld %d\n", reclaimable - memory, reclaimable->next);
+    //printf("Reclaiming %ld %d\n", index(reclaimable), reclaimable->next);
     if(before != NIL) before->next = reclaimable->next; // unlink item from freelist
-    else freelist = &memory[freelist->next]; // at start of freelist; move one up
+    else freelist = pointer(freelist->next); // at start of freelist; move one up
     result = reclaimable;
   }
   else result = allocate_node();
@@ -168,7 +168,7 @@ Node * retrofit (Node * node)
   {
     //printf("Retrofitting; size=%d\n", size_required);print(node);
     if (before != NIL) before->next = available->next; // unchain result from freelist
-    else  freelist = &memory[freelist->next]; // at start of freelist; just move it one up
+    else  freelist = pointer(freelist->next); // at start of freelist; just move it one up
 
     Node * result = available;
     memcpy(result, node, sizeof(Node) * size_required);
@@ -180,7 +180,7 @@ Node * retrofit (Node * node)
   // else
   //printf("(%d != %d)", size_available, size_required);
   before = available;
-  available = &memory[available->next];
+  available = pointer(available->next);
  
   goto recurse;
 }
@@ -206,7 +206,7 @@ Node * copy(Node * node, int n_recurse)
   memcpy(result, node, sizeof(Node) * num_nodes);
 
   if (n_recurse > 0 && node->next != 0)
-    result->next = copy(&memory[node->next], n_recurse-1) - memory;
+    result->next = index(copy(pointer(node->next), n_recurse-1));
   else
     result->next = 0; // TODO this is unexpected behaviour in some cases
 
@@ -237,11 +237,11 @@ Node * lookup_internal(Node * env, Node * name)
 {
   while (env != NULL && env != NIL)
   {
-    Node * envnode = &memory[env->value.u32];
+    Node * envnode = pointer(env->value.u32);
     // Thanks to unique label character arrays, we can now just compare pointers here
     if (envnode->value.u32 == name->value.u32) return env;
 
-    env = &memory[env->next];
+    env = pointer(env->next);
   }
 
   // Return either NULL if no env; or NIL if not found
@@ -261,7 +261,7 @@ Node * lookup(Node * env, Node * name)
     return NIL; // by means of recovery??
   }
   // else
-  return &memory[result->value.u32];
+  return pointer(result->value.u32);
 }
 
 

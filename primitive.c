@@ -13,11 +13,11 @@
 Node * plus(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
-  args = &memory[args->next];
+  args = pointer(args->next);
   while (args != NIL)
   {
     result->value.i32 += args->value.i32;
-    args = &memory[args->next];
+    args = pointer(args->next);
   }
   return result;
 }
@@ -25,7 +25,7 @@ Node * plus(Node * args, Node ** env)
 Node * minus(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
-  args = &memory[args->next];
+  args = pointer(args->next);
   while (args != NIL)
   {
     result->value.i32 -= args->value.i32;
@@ -37,7 +37,7 @@ Node * minus(Node * args, Node ** env)
 Node * times(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
-  args = &memory[args->next];
+  args = pointer(args->next);
   while (args != NIL)
   {
     result->value.i32 *= args->value.i32;
@@ -49,7 +49,7 @@ Node * times(Node * args, Node ** env)
 Node * div(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
-  args = &memory[args->next];
+  args = pointer(args->next);
   result->value.i32 = result->value.i32 / args->value.i32;
   return result;
 }
@@ -57,7 +57,7 @@ Node * div(Node * args, Node ** env)
 Node * remain(Node * args, Node ** env)
 {
   Node * result = new_node(TYPE_INT, args->value.i32);
-  args = &memory[args->next];
+  args = pointer(args->next);
   result->value.i32 = result->value.i32 % args->value.i32;
   return result;
 }
@@ -65,7 +65,7 @@ Node * remain(Node * args, Node ** env)
 Node * eq (Node * lhs, Node ** env)
 {
   if (lhs == NIL || lhs->next == 0) return NIL;
-  Node * rhs = &memory[lhs->next];
+  Node * rhs = pointer(lhs->next);
   if (lhs->type != rhs->type) return NIL;
   if (lhs->value.u32 != rhs->value.u32) return NIL;
   return NIL+1; // aka 'true'
@@ -82,20 +82,20 @@ Node * lt (Node * lhs, Node ** env)
 Node * gt (Node * lhs, Node ** env)
 {
   if (lhs == NIL || lhs->next == 0) return NIL;
-  Node * rhs = &memory[lhs->next];
+  Node * rhs = pointer(lhs->next);
   if (lhs->type != rhs->type) return NIL;
   return (lhs->value.i32 > rhs->value.i32) ? NIL+1 : NIL;
 }
 
 Node * car (Node * val, Node ** env)
 {
-  Node * list = &memory[val->value.u32];
+  Node * list = pointer(val->value.u32);
   return element(list);
 }
 
 Node * cdr (Node * val, Node ** env)
 {
-  Node * list = &memory[val->value.u32];
+  Node * list = pointer(val->value.u32);
   // don't repackage NIL result into a single pointer-with-type result
   if (list == NIL) return list;
 
@@ -113,14 +113,14 @@ Node * cdr (Node * val, Node ** env)
 
 Node * cons (Node * car, Node ** env)
 {
-  Node * cdr = &memory[car->next];
+  Node * cdr = pointer(car->next);
   if (cdr->type == TYPE_NODE)
   {
     // In-line the sublist
     car = copy(car, 0);
-    cdr = copy(&memory[cdr->value.u32], 0);
+    cdr = copy(pointer(cdr->value.u32), 0);
     //cdr->element = false;
-    car->next = cdr - memory;
+    car->next = index(cdr);
   }
   else
   {
@@ -133,7 +133,7 @@ Node * cons (Node * car, Node ** env)
   // Even a single cons cell returned
   // should be presented as an Element
   // with type tagging:
-  return new_node(TYPE_NODE, idx(car));
+  return new_node(TYPE_NODE, index(car));
 }
 
 // As per the rules for (no) recursiveness,

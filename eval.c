@@ -14,10 +14,10 @@
 
 Node * set_variable(Node ** env, Node * expr)
 {
-  Node * var = &memory[expr->value.u32]; // no longer: lookup(*env, expr);
-  Node * val = eval(&memory[expr->next], env);
+  Node * var = pointer(expr->value.u32); // no longer: lookup(*env, expr);
+  Node * val = eval(pointer(expr->next), env);
   val->element = true;
-  var->next = val - memory;
+  var->next = index(val);
   return val;
 }
 
@@ -29,11 +29,38 @@ Node * def_arg(Node * env, Node * name)
   name->next = 0;
 
   // Chain into to environment (at front)
-  Node * newval = new_node(TYPE_NODE, name - memory);
+  Node * newval = new_node(TYPE_NODE, index(name));
   newval->element = false;
-  newval->next = env - memory;
+  newval->next = index(env);
   env = newval;
   return env;
+}
+
+/**
+ * Make arglist as array, so that it may
+ * be instantiated by a single 'copy' call,
+ * after which variables can (almost) directly refer to their index.
+ */
+
+Node * arglist_as_array(Node * arglist)
+{
+  int len = length(arglist);
+  Node * result = new_array_node(TYPE_NODE, len << 3);
+
+  Node * arg = &nodearray(result)[0]; // may be out-of-bounds; then while is not entered
+  while (arglist != NIL)
+  {
+    arg->mark = false;
+    arg->element = false; // ?
+    arg->type = arglist->type;
+    arg->array = false; if (arglist->array) printf("Error: can't in-line array\n");
+    arg->value = arglist->value;
+    arg->next = arglist->next == 0 ? 0 : index(arg+1);
+    
+    arg += 1;
+    arglist = &memory[arglist->next];
+  }
+  return result;
 }
 
 Node * enclose(Node * env, Node * lambda)
@@ -47,7 +74,7 @@ Node * enclose(Node * env, Node * lambda)
 
   Node * argnames;
   if(lambda->type == TYPE_NODE) // usual case: (lambda (x) ...)
-    argnames = &memory[lambda->value.u32];
+    argnames = pointer(lambda->value.u32);
   else
     argnames = element(lambda); // special case: (lambda x ...)
 
@@ -55,25 +82,25 @@ Node * enclose(Node * env, Node * lambda)
   while (argnames != NIL)
   {
     env = def_arg(env, argnames);
-    argnames = &memory[argnames->next];
+    argnames = pointer(argnames->next);
   }
   
   // And transform expression
   Node * arglist = copy(lambda, 0);
-  Node * body = transform_elem(&memory[lambda->next], &env);
+  Node * body = transform_elem(pointer(lambda->next), &env);
   body->element = false;
-  arglist->next = body - memory;
+  arglist->next = index(body);
 
   // We define our closure as a list: (env args body)
   // But that is actually an implementation detail;
   // so that's why we return the result (a func) as a new type.
   // TODO in theory we don't even need to keep env, since we have pre-wired 'body'!
-  Node * closure = new_node(TYPE_NODE, env - memory);
+  Node * closure = new_node(TYPE_NODE, index(env));
   closure->element=false;
-  closure->next = arglist - memory;
+  closure->next = index(arglist);
 
   // We should return a (single) element
-  return new_node(TYPE_FUNC, closure - memory);
+  return new_node(TYPE_FUNC, index(closure));
 }
 
 Node * eval_and_chain(Node * args, Node ** env)
@@ -81,22 +108,22 @@ Node * eval_and_chain(Node * args, Node ** env)
   if (args == NIL) return NIL;
   Node * result = eval(args, env);
   result->element = false;
-  result->next = eval_and_chain(&memory[args->next], env) - memory;
+  result->next = index(eval_and_chain(&memory[args->next], env));
   return result;
 }
 
 Node * run_lambda(Node ** env, Node * expr, Node * args, bool eval_args)
 {
-  Node * lambda = &memory[expr->value.u32];
+  Node * lambda = pointer(expr->value.u32);
 
-  Node * lambda_env = &memory[lambda->value.u32];
+  Node * lambda_env = pointer(lambda->value.u32);
   
   bool args_as_list = true; // special case: (lambda x ...)
-  Node * argnames = element(&memory[lambda->next]);
+  Node * argnames = element(pointer(lambda->next));
   if (argnames->type == TYPE_NODE)
   {
     args_as_list = false; // usual case: (lambda (x) ...)
-    argnames = &memory[argnames->value.u32];
+    argnames = pointer(argnames->value.u32);
   }
 
   Node * body = &memory[ memory[lambda->next].next ];
@@ -108,10 +135,10 @@ Node * run_lambda(Node ** env, Node * expr, Node * args, bool eval_args)
     if (argnames->element) args_as_list = true; // other special case: (lambda (x y . z) ...)
     Node * var = lookup(lambda_env, argnames);
 
-    if (eval_args) var->next = (args_as_list ? new_node(TYPE_NODE, idx(eval_and_chain(args, env))) : eval(args, env)) - memory;
-    else var->next = (args_as_list ? new_node(TYPE_NODE, idx(args)) : element(args)) - memory;
-    argnames = &memory[argnames->next];
-    args = &memory[args->next];
+    if (eval_args) var->next = index(args_as_list ? new_node(TYPE_NODE, index(eval_and_chain(args, env))) : eval(args, env));
+    else var->next = index(args_as_list ? new_node(TYPE_NODE, index(args)) : element(args));
+    argnames = pointer(argnames->next);
+    args = pointer(args->next);
   }
 
   return eval(body, &lambda_env);
@@ -128,8 +155,8 @@ Node * perform_if (Node ** env, Node *args)
   // If any of the below is not supplied by the user,
   // it simply results in a chain of NIL evaluations,
   // which is what we want anyway.
-  Node * thenn = &memory[args->next];
-  Node * elsse = &memory[thenn->next];
+  Node * thenn = pointer(args->next);
+  Node * elsse = pointer(thenn->next);
   if(result == NIL) return eval(elsse, env);
   else return eval(thenn, env);
 }
@@ -142,10 +169,10 @@ Node * run_integer(Node ** env, Node * func, Node * args)
   // Also, count from zero?
 
   args = eval_and_chain(args, env);
-  Node * list = addr(args->value.u32);
+  Node * list = pointer(args->value.u32);
   int32_t n = func->value.i32;
   for (int i=1; i<n; i++)
-    list = addr(list->next);
+    list = pointer(list->next);
   return element(list);
 }
 
@@ -160,7 +187,7 @@ Node * apply(Node * funcexpr, Node ** env)
   Node * func = eval(funcexpr, env);
   if(func == NIL) return func;
 
-  Node * args = &memory[funcexpr->next];
+  Node * args = pointer(funcexpr->next);
 
   char * chars;
 
@@ -170,7 +197,7 @@ Node * apply(Node * funcexpr, Node ** env)
       return run_integer(env, func, args);
       break;
     case TYPE_ID:
-      chars = strval(&memory[func->value.u32]);
+      chars = strval(pointer(func->value.u32));
       if(strcmp("define", chars) == 0) return set_variable(env, args);
       if (strcmp("define-syntax", chars) == 0) return set_variable(env, args);
       if(strcmp("set!", chars) == 0) return set_variable(env, args);
@@ -201,7 +228,7 @@ Node * eval(Node * expr, Node ** env)
   if (expr == NULL || expr == NIL) return expr;
   if(expr->type == TYPE_ID) return expr; // Since having variables transformed into TYPE_VAR below, any leftover IDs should be preserved
   if(expr->type == TYPE_VAR) return element(&memory[ memory[expr->value.u32].next ]); // Get the value part of the VAR
-  if(expr->type == TYPE_NODE) return apply( &memory[expr->value.u32], env);
+  if(expr->type == TYPE_NODE) return apply( pointer(expr->value.u32), env);
 
   return element(expr);
 }

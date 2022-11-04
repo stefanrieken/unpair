@@ -38,7 +38,7 @@ Node * unique_small_string(char * val)
   }
   // Not found: make
   where = make_char_array_node(val);
-  where->next = unique_strings - memory;
+  where->next = index(unique_strings);
   unique_strings = retrofit(where);
   return unique_strings;
 }
@@ -46,7 +46,7 @@ Node * unique_small_string(char * val)
 // for 1-char args only!
 Node * make_arg(char * arg)
 {
-  return new_node(TYPE_ID, unique_small_string(arg) - memory);
+  return new_node(TYPE_ID, index(unique_small_string(arg)));
 }
 
 Node * def_arg(Node * env, Node * name);
@@ -69,22 +69,22 @@ void make_boolean(Node * slot)
 
   a->element=false;
   b->element=false;
-  a->next = b - memory;
+  a->next = index(b);
   b->next = 0;
 
-  Node * arglist = new_node(TYPE_NODE, a - memory);
+  Node * arglist = new_node(TYPE_NODE, index(a));
   arglist->element=false;
 
-  Node * closure = new_node(TYPE_NODE, env - memory);
+  Node * closure = new_node(TYPE_NODE, index(env));
   closure->element = false;
-  closure->next = arglist - memory;
+  closure->next = index(arglist);
 
   Node * which = (slot == NIL) ? b : a;
-  Node * outcome = new_node(TYPE_VAR, lookup(env, which) - memory);
+  Node * outcome = new_node(TYPE_VAR, index(lookup(env, which)));
   outcome->element=false;
 
-  arglist->next = outcome - memory;
-  slot->value.u32 = closure - memory;
+  arglist->next = index(outcome);
+  slot->value.u32 = index(closure);
   slot->type = TYPE_FUNC;
 }
 

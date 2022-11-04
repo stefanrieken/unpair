@@ -85,7 +85,7 @@
 Node * transform_if(Node ** env, Node * expr)
 {
   Node * iff = copy(expr, 0);
-  iff->next = transform_elements(&memory[expr->next], env) - memory;
+  iff->next = index(transform_elements(pointer(expr->next), env));
   return iff;
 }
 
@@ -96,8 +96,8 @@ Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
 {
   if (expr->next != 0)
   {
-    Node * name = &memory[expr->next];
-    Node * value = &memory[name->next]; // may be NIL
+    Node * name = pointer(expr->next);
+    Node * value = pointer(name->next); // may be NIL
 
     Node * expr2 =copy(expr, 0);
     Node * var = transform_elem(name, def_env); // does the VAR lookup, or any other applicable shenanigans
@@ -125,14 +125,14 @@ Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
   if (expr->next != 0)
   {
     // Make new env entry
-    Node * name = copy(&memory[expr->next], 0);
+    Node * name = copy(pointer(expr->next), 0);
     name->element = false;
     name->next = 0;
 
     // Chain into to environment (at front)
-    Node * newval = new_node(TYPE_NODE, name - memory);
+    Node * newval = new_node(TYPE_NODE, index(name));
     newval->element = false;
-    newval->next = (*def_env) - memory;
+    newval->next = index(*def_env);
     (*def_env) = newval;
 
     // Change the run-time expression (borrow code for 'set')
@@ -145,7 +145,7 @@ Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
 
 Node * as_primitive(Node * label)
 {
-  int num = find_primitive(strval(&memory[label->value.u32]));
+  int num = find_primitive(strval(pointer(label->value.u32)));
   if (num < 0) return NIL;
   else return new_node(TYPE_PRIMITIVE, num);
 }
@@ -163,7 +163,7 @@ Node * macrotransform(Node * expr, Node ** env)
   {
     // Execute common lambda, but make sure it does
     // not evaluate its args, which are now code (fragments)
-    expr = &memory[run_lambda(env, macro, expr, false)->value.u32];
+    expr = pointer(run_lambda(env, macro, expr, false)->value.u32);
     macro = find_macro(macros, expr);
   }
   return expr;
@@ -183,7 +183,7 @@ Node * transform_elem(Node * elem, Node ** env)
   }
   else if (elem->type == TYPE_NODE)
   {
-    return new_node(TYPE_NODE, transform_expr(&memory[elem->value.u32], env) - memory);
+    return new_node(TYPE_NODE, index(transform_expr(&memory[elem->value.u32], env)));
   }
   // else
   return elem;
@@ -195,7 +195,7 @@ Node * transform_elements(Node * els, Node ** env)
   Node * result = transform_elem(els, env);
   if (result == NIL) return NIL;
   result->element = els->element;
-  result->next = transform_elements(&memory[els->next], env) - memory;
+  result->next = index(transform_elements(&memory[els->next], env));
   return result;
 }
 
@@ -212,7 +212,7 @@ Node * transform_expr(Node * expr, Node ** env)
   if (expr->type == TYPE_ID)
   {
     // Still have to compare strings until labels are unique in memory
-    char * chars = strval(&memory[expr->value.u32]);
+    char * chars = strval(pointer(expr->value.u32));
     if (strcmp("define", chars) == 0) return define_variable(env, env, expr);
     if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, env, expr);
     if (strcmp("set!", chars) == 0) return transform_set(env, env, expr);

@@ -58,7 +58,7 @@ Node * sweep()
     current->mark = false; // clear mark
   else
   {
-    current->next = freelist - memory;
+    current->next = index(freelist);
     freelist = current;
   }
   

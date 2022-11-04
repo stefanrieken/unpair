@@ -49,7 +49,7 @@ Node * parse_nodes()
   {
     // We have parsed a full sublist as our 'value';
     // convert our value field to a pointer to that list.
-    val = new_node(TYPE_NODE, val - memory);
+    val = new_node(TYPE_NODE, index(val));
   }
 
   // In all cases, we're being a list here (or a pair, or a false list - but not an atom).
@@ -63,7 +63,7 @@ Node * parse_nodes()
       // supporting dotted-pair ('cons') notation.
       Node * cdr = parse_value(read_non_whitespace_char()); // may also end up being a list
       if (cdr->type == TYPE_NODE) cdr = &memory[cdr->value.u32]; // in which case, use pointer directly, as (a . (b)) == (a b)
-      val->next = cdr - memory;
+      val->next = index(cdr);
       int ch = read_non_whitespace_char();
       if (ch != ')')
       {
@@ -74,7 +74,7 @@ Node * parse_nodes()
     else
     {
       unread(ch);
-      val->next = parse_nodes() - memory;
+      val->next = index(parse_nodes());
     }
   }
   else printf("Parse error: null value in list(\?\?)");
@@ -109,7 +109,7 @@ Node * unique_string(Node * val)
 
   // Not found: use given node;
   // Call 'retrofit' now that we know we can afford it
-  val->next = unique_strings - memory;
+  val->next = index(unique_strings);
   unique_strings = retrofit(val);
   return unique_strings;
 }
@@ -153,7 +153,7 @@ Node * parse_string()
 
   // Now add pointer to String result
   result = unique_string(result);
-  return new_node(TYPE_STRING, result - memory);
+  return new_node(TYPE_STRING, index(result));
 }
 
 Node * parse_label(int ch)
@@ -222,7 +222,7 @@ Node * parse_label_or_number (int c, int radix)
       // Give up trying to parse label as int;
       // Return label as pointer to char array
       node = unique_string(node);
-      return new_node(TYPE_ID, node - memory);
+      return new_node(TYPE_ID, index(node));
     }
 
     result = (result * radix) + intval;
@@ -251,12 +251,12 @@ extern Node * unique_small_string(char * val);
 
 Node * parse_quote()
 {
-  Node * quote = new_node(TYPE_ID, unique_small_string("quote") - memory);
+  Node * quote = new_node(TYPE_ID, index(unique_small_string("quote")));
   quote->element = false;
 
   Node * val = parse();
   val->element = false;
-  quote->next = val - memory;
+  quote->next = index(val);
   return quote;
 }
 
@@ -270,7 +270,7 @@ Node * parse_value(int ch)
     ch = read_non_whitespace_char();
   }
 
-  if(ch == '(') return new_node(TYPE_NODE, parse_nodes() - memory); // we parse one element here; so if list, wrap into node pointer
+  if(ch == '(') return new_node(TYPE_NODE, index(parse_nodes())); // we parse one element here; so if list, wrap into node pointer
   if (ch == '\'') return parse_quote();
   if (ch == '\"') return parse_string();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.

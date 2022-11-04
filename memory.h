@@ -53,8 +53,8 @@ Node * find_macro(Node * env, Node * name);
 // NIL == &memory[0]
 #define NIL memory
 
-#define idx(node) (node - memory)
-#define addr(index) (&memory[index])
+#define index(node) ((node) - memory)
+#define pointer(idxval) (&memory[idxval])
 
 #define num_value_nodes(node) ((node->value.u32+7) / 8)
 #endif /* MEMORY_H */

@@ -143,8 +143,8 @@ int main(int argc, char ** argv)
     // make a distinction here and directly invoke 'apply' separately if we have parsed such a list expression.
     // Essentially, 'eval' goes on to do the same thing for sub-lists (but distinguishes them by means of the
     // node pointer value type).
-    if (node->element) node = eval(node, &env);
-    else node = apply(node, & env);
+    if (node->element) node = eval(node, env);
+    else node = apply(node, env);
 
     print(node);
   } while(node != NULL);

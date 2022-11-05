@@ -163,7 +163,7 @@ Node * macrotransform(Node * expr, Node ** env)
   {
     // Execute common lambda, but make sure it does
     // not evaluate its args, which are now code (fragments)
-    expr = pointer(run_lambda(env, macro, expr, false)->value.u32);
+    expr = pointer(run_lambda(*env, macro, expr, false)->value.u32);
     macro = find_macro(macros, expr);
   }
   return expr;

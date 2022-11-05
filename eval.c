@@ -12,7 +12,7 @@
 // ...because we didn't do it before:
 #include "transform.h"
 
-Node * set_variable(Node ** env, Node * expr)
+Node * set_variable(Node * env, Node * expr)
 {
   Node * var = pointer(expr->value.u32); // no longer: lookup(*env, expr);
   Node * val = eval(pointer(expr->next), env);
@@ -103,7 +103,7 @@ Node * enclose(Node * env, Node * lambda)
   return new_node(TYPE_FUNC, index(closure));
 }
 
-Node * eval_and_chain(Node * args, Node ** env)
+Node * eval_and_chain(Node * args, Node * env)
 {
   if (args == NIL) return NIL;
   Node * result = eval(args, env);
@@ -112,7 +112,7 @@ Node * eval_and_chain(Node * args, Node ** env)
   return result;
 }
 
-Node * run_lambda(Node ** env, Node * expr, Node * args, bool eval_args)
+Node * run_lambda(Node * env, Node * expr, Node * args, bool eval_args)
 {
   Node * lambda = pointer(expr->value.u32);
 
@@ -141,15 +141,19 @@ Node * run_lambda(Node ** env, Node * expr, Node * args, bool eval_args)
     args = pointer(args->next);
   }
 
-  return eval(body, &lambda_env);
+  return eval(body, lambda_env);
 }
 
-Node * run_primitive(Node ** env, Node * prim, Node * args)
+Node * run_primitive(Node * env, Node * prim, Node * args)
 {
-  return jmptable[prim->value.u32](eval_and_chain(args, env), env);
+  // We do not presently add to the env from within primitives,
+  // nor is this a particularly good idea - so then perhaps
+  // we should not suggest it by passing the env as a double
+  // pointer, as we still do here.
+  return jmptable[prim->value.u32](eval_and_chain(args, env), &env);
 }
 
-Node * perform_if (Node ** env, Node *args)
+Node * perform_if (Node * env, Node *args)
 {
   Node * result = eval(args, env);
   // If any of the below is not supplied by the user,
@@ -161,7 +165,7 @@ Node * perform_if (Node ** env, Node *args)
   else return eval(thenn, env);
 }
 
-Node * run_integer(Node ** env, Node * func, Node * args)
+Node * run_integer(Node * env, Node * func, Node * args)
 {
   // Here's a(nother) novel idea:
   // (2 '("foo" "bar" "baz")) == "bar"
@@ -181,7 +185,7 @@ Node * run_integer(Node ** env, Node * func, Node * args)
 //
 
 // Evaluate a list expression, that is, apply function to args.
-Node * apply(Node * funcexpr, Node ** env)
+Node * apply(Node * funcexpr, Node * env)
 {
   // Allow sub-expression at function name position
   Node * func = eval(funcexpr, env);
@@ -201,7 +205,7 @@ Node * apply(Node * funcexpr, Node ** env)
       if(strcmp("define", chars) == 0) return set_variable(env, args);
       if (strcmp("define-syntax", chars) == 0) return set_variable(env, args);
       if(strcmp("set!", chars) == 0) return set_variable(env, args);
-      if(strcmp("lambda", chars) == 0) return enclose((*env), args);
+      if(strcmp("lambda", chars) == 0) return enclose(env, args);
       if(strcmp("quote", chars) == 0) return element(args);
       if(strcmp("if", chars) == 0) return perform_if(env, args);
       // else
@@ -223,7 +227,7 @@ Node * apply(Node * funcexpr, Node ** env)
 
 // Evaluate a single node, ignoring that it may be inside a list -
 // but always returning the result as an element
-Node * eval(Node * expr, Node ** env)
+Node * eval(Node * expr, Node * env)
 {
   if (expr == NULL || expr == NIL) return expr;
   if(expr->type == TYPE_ID) return expr; // Since having variables transformed into TYPE_VAR below, any leftover IDs should be preserved

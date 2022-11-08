@@ -10,6 +10,7 @@ typedef enum Type {
   TYPE_ID,      // = label
   TYPE_NODE,     // = node pointer
   TYPE_FUNC,     // = closure (transformed lambda)
+  TYPE_ARG,      // references a per-instance variable (function argument or local 'define')
   TYPE_VAR,      // references the FULL (name val) entry for pre-dereferenced variables.
   TYPE_PRIMITIVE //
 } Type;
@@ -39,5 +40,8 @@ typedef struct Node {
 
 int length(Node * list);
 int mem_usage(Node * list);
+
+// Basically 'cons' with explicit type
+Node * chain(Type type, uint32_t value, Node * cdr);
 
 #endif /*NODE_H*/

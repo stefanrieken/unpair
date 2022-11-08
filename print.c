@@ -35,8 +35,11 @@ void print_node(Node * node)
       break;
     case TYPE_FUNC:
       printf("(lambda ");
-      print_node(&memory[memory[node->value.u32].next]);
+      print_node(&memory[ memory [ memory[node->value.u32].next ].next ] );
       printf(")");
+      break;
+    case TYPE_ARG:
+      printf("arg:%s", strval(&memory[memory[node->value.u32].value.u32]));
       break;
     case TYPE_VAR:
       printf("%s", strval(&memory[memory[node->value.u32].value.u32]));

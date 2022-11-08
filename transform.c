@@ -82,17 +82,17 @@
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
-Node * transform_if(Node ** env, Node * expr)
+Node * transform_if(Node ** constructing_env, Node * existing_env, Node * expr)
 {
   Node * iff = copy(expr, 0);
-  iff->next = index(transform_elements(pointer(expr->next), env));
+  iff->next = index(transform_elements(pointer(expr->next), constructing_env, existing_env));
   return iff;
 }
 
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
-Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
+Node * transform_set(Node ** constructing_env, Node * existing_env, Node * expr)
 {
   if (expr->next != 0)
   {
@@ -100,12 +100,12 @@ Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
     Node * value = pointer(name->next); // may be NIL
 
     Node * expr2 =copy(expr, 0);
-    Node * var = transform_elem(name, def_env); // does the VAR lookup, or any other applicable shenanigans
+    Node * var = transform_elem(name, constructing_env, existing_env); // does the VAR lookup, or any other applicable shenanigans
     var->element = false;
-    Node * val = transform(value, transform_env);
+    Node * val = transform(value, constructing_env, existing_env);
 
-    expr2->next = var-memory;
-    var->next = val-memory;
+    expr2->next = index(var);
+    var->next = index(val);
 
     return expr2;
   }
@@ -120,7 +120,7 @@ Node * transform_set(Node ** def_env, Node ** transform_env, Node * expr)
  *
  * Returns the transformed form fur further execution upon 'eval' time.
  */
-Node * define_variable(Node ** def_env, Node ** transform_env, Node * expr)
+Node * define_variable(Node ** def_env, Node * transform_env, Node * expr)
 {
   if (expr->next != 0)
   {
@@ -152,7 +152,7 @@ Node * as_primitive(Node * label)
 
 extern Node * macros;
 
-Node * macrotransform(Node * expr, Node ** env)
+Node * macrotransform(Node * expr, Node * env)
 {
   if (macros == NIL) return expr;
 
@@ -163,45 +163,48 @@ Node * macrotransform(Node * expr, Node ** env)
   {
     // Execute common lambda, but make sure it does
     // not evaluate its args, which are now code (fragments)
-    expr = pointer(run_lambda(*env, macro, expr, false)->value.u32);
+    // TODO: we presently only pass it existing_env,
+    // and not the env presently under construction -
+    // but shouldn't the macro be executed purely in the macros env?
+    expr = pointer(run_lambda(env, macro, expr, false)->value.u32);
     macro = find_macro(macros, expr);
   }
   return expr;
 }
 
-Node * transform_elem(Node * elem, Node ** env)
+Node * transform_elem(Node * elem, Node ** constructing_env, Node * existing_env)
 {
   if (elem->type == TYPE_ID)
   {
     // Lookup the value location in memory by name,
     // returning a TYPE_VAR.
-    // TODO this is where recursive calls go awry
-    Node * result = dereference(*env, elem);
+    Node * result = dereference(*constructing_env, elem, TYPE_ARG);
+    if (result == NIL) result = dereference(existing_env, elem, TYPE_VAR);
     if (result == NIL) result = as_primitive(elem);
-    if (result == NIL) {print(*env); printf("Compilation error: '%s' not found.\n", strval(&memory[elem->value.u32])); }
+    if (result == NIL) printf("Compilation error: '%s' not found.\n", strval(&memory[elem->value.u32]));
     return result;
   }
   else if (elem->type == TYPE_NODE)
   {
-    return new_node(TYPE_NODE, index(transform_expr(&memory[elem->value.u32], env)));
+    return new_node(TYPE_NODE, index(transform_expr(&memory[elem->value.u32], constructing_env, existing_env)));
   }
   // else
   return elem;
 }
 
-Node * transform_elements(Node * els, Node ** env)
+Node * transform_elements(Node * els, Node ** constructing_env, Node * existing_env)
 {
   if (els == NIL) return NIL;
-  Node * result = transform_elem(els, env);
+  Node * result = transform_elem(els, constructing_env, existing_env);
   if (result == NIL) return NIL;
   result->element = els->element;
-  result->next = index(transform_elements(&memory[els->next], env));
+  result->next = index(transform_elements(&memory[els->next], constructing_env, existing_env));
   return result;
 }
 
-Node * transform_expr(Node * expr, Node ** env)
+Node * transform_expr(Node * expr, Node ** constructing_env, Node * existing_env)
 {
-  Node * expr2 = macrotransform(expr, env);
+  Node * expr2 = macrotransform(expr, existing_env);
 
   if (expr2 != expr)
   {
@@ -213,22 +216,22 @@ Node * transform_expr(Node * expr, Node ** env)
   {
     // Still have to compare strings until labels are unique in memory
     char * chars = strval(pointer(expr->value.u32));
-    if (strcmp("define", chars) == 0) return define_variable(env, env, expr);
-    if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, env, expr);
-    if (strcmp("set!", chars) == 0) return transform_set(env, env, expr);
+    if (strcmp("define", chars) == 0) return define_variable(constructing_env, existing_env, expr);
+    if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, existing_env, expr);
+    if (strcmp("set!", chars) == 0) return transform_set(constructing_env, existing_env, expr);
     if (strcmp("lambda", chars) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
     if (strcmp("quote" , chars) == 0) return expr; // This one too.
-    if (strcmp("if", chars) == 0) return transform_if(env, expr);
+    if (strcmp("if", chars) == 0) return transform_if(constructing_env, existing_env, expr);
     // else - find primitive or user defined function
-    return transform_elements(expr, env);
+    return transform_elements(expr, constructing_env, existing_env);
   }
   // else
-  return transform_elements(expr, env);
+  return transform_elements(expr, constructing_env, existing_env);
 }
 
-Node * transform(Node * node, Node ** env)
+Node * transform(Node * node, Node ** constructing_env, Node * existing_env)
 {
-    if (node->element) return transform_elem(node, env);
-    else return transform_expr(node, env);  
+    if (node->element) return transform_elem(node, constructing_env, existing_env);
+    else return transform_expr(node, constructing_env, existing_env);  
 }
 

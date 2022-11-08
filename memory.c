@@ -205,7 +205,7 @@ Node * copy(Node * node, int n_recurse)
   if (node->array) num_nodes += num_value_nodes(node);
   memcpy(result, node, sizeof(Node) * num_nodes);
 
-  if (n_recurse > 0 && node->next != 0)
+  if (n_recurse != 0 && node->next != 0)
     result->next = index(copy(pointer(node->next), n_recurse-1));
   else
     result->next = 0; // TODO this is unexpected behaviour in some cases
@@ -257,7 +257,7 @@ Node * lookup(Node * env, Node * name)
   if(result == NULL || result == NIL)
   {
     // This should be normally caught as a compile time error
-    printf("Runtime error: cannot find variable '%s'\n", strval(name));
+    printf("Runtime error: cannot find variable '%s'\n", strval(pointer(name->value.u32)));
     return NIL; // by means of recovery??
   }
   // else
@@ -266,19 +266,19 @@ Node * lookup(Node * env, Node * name)
 
 
 /**
- * Lookup a variable; return a TYPE_VAR reference, or NIL if not found.
+ * Lookup a variable; return a TYPE_ARG or TYPE_VAR reference, or NIL if not found.
  *
  * NOTE: presently the TYPE_VAR reference is a bit of a silly wrapper around the
  * variable in memory. The longer-term goal is to encode TYPE_VAR in such a way
  * that the actual variable can be found quickly even in dynamic memory circumstances;
  * e.g. x = 0,1 for variable idx 1 in the top-level env.
  */
-Node * dereference(Node * env, Node * name)
+Node * dereference(Node * env, Node * name, Type type)
 {
   Node * result = lookup_internal(env, name);
   if(result == NULL || result == NIL) return NIL; // return unresolved label
   // else
-  return new_node(TYPE_VAR, result->value.u32);
+  return new_node(type, result->value.u32);
 
 }
 

@@ -134,7 +134,7 @@ int main(int argc, char ** argv)
     if (node == NULL) continue;
 
     // Compile
-    node = transform(node, &env);
+    node = transform(node, &env, env);
 
     // In case of compilation error:
     if (node == NULL) continue;

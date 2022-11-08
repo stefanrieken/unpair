@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "node.h"
 #include "memory.h"
 
@@ -22,4 +24,11 @@ int mem_usage(Node * list)
 {
   if (list == NIL) return 0;
   return 1 + mem_usage(&memory[list->next]);
+}
+
+Node * chain(Type type, uint32_t value, Node * cdr)
+{
+  Node * result = new_node(type, value);
+  result->element = false;
+  result->next = index(cdr);
 }

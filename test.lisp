@@ -46,11 +46,12 @@
   (lambda (_ val)
     (list 'car (list 'cdr val))))
 
+;; better really:
+;(define cadr (lambda (x) (car (cdr x))))
+
 (cadr '(1 2 3))
 '"Map function"
-;; This function is self-recursive, which doesn't quite work yet:
-;; replace the failing (map func (cdr values)) with (car (cdr values))
-;; (or the reverse) to confirm that this is the problem spot.
+
 (define map
   (lambda (func values)
     (if (= values '())
@@ -58,27 +59,17 @@
       (cons (func (car values)) (map func (cdr values)))
 )))
 
-(define map2
-  (lambda (func values)
-    (if (= values '())
-      '()
-      (cons (func (car values)) (map func (cdr values)))
-)))
-
-;; TODO this doesn't work, because
-;; of the recursive use of the same argument slots.
-;(map car (map cdr '((1 2) (3 4))))
-;; I say that because this works:
-(map2 car (map cdr '((1 2) (3 4))))
+'"Recursive calls finally work, thanks to proper spaghetti stack args"
+(map car (map cdr '((1 2) (3 4))))
 
 ;; cannot presently map a macro in
-;(map cadr '((1 . 2) (3 . 4)))
+;(map cadr '((1 2) (3 4)))
 
 ;; This one is also still in the making
 ;(define-syntax let
 ;  (lambda (_ vars body)
 ;    (list (list 'lambda (map car vars) body) (map cdr vars))
 ;))
-
+;
 ;(let ((foo 33)) (+ foo foo))
 

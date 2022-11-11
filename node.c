@@ -31,4 +31,5 @@ Node * chain(Type type, uint32_t value, Node * cdr)
   Node * result = new_node(type, value);
   result->element = false;
   result->next = index(cdr);
+  return result;
 }

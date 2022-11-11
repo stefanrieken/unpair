@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>	
+#include <string.h>
 
 #include "print.h"
 #include "memory.h"
@@ -39,8 +39,8 @@ void print_node(Node * node)
       printf(")");
       break;
     case TYPE_ARG:
-      printf("arg:%s", strval(&memory[memory[node->value.u32].value.u32]));
-      break;
+    //  printf("arg:%s", strval(&memory[memory[node->value.u32].value.u32]));
+    //  break;
     case TYPE_VAR:
       printf("%s", strval(&memory[memory[node->value.u32].value.u32]));
       break;

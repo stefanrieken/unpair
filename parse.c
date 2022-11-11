@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>	
+#include <string.h>
 
 #include "memory.h"
 #include "parse.h"
@@ -86,34 +86,6 @@ char * escapes = "nrtf";
 char * replacements = "\n\r\t\f";
 int escapes_length = 4;
 
-/**
- * Return the item in 'unique_strings' that is equal to 'val',
- * or chain in 'val' (and return it) if it is not there yet.
- * Deletes 'val' if not unique!
- */
-extern Node * unique_strings;
-
-Node * unique_string(Node * val)
-{
-  Node * where = unique_strings;
-  while (where != NIL)
-  {
-    if(strcmp(strval(val), strval(where)) == 0)
-    {
-      // Assume just parsed 'val'; so may remove
-      memsize -= num_value_nodes(val)+1;
-      return where;
-    }
-    where = &memory[where->next];
-  }
-
-  // Not found: use given node;
-  // Call 'retrofit' now that we know we can afford it
-  val->next = index(unique_strings);
-  unique_strings = retrofit(val);
-  return unique_strings;
-}
-
 // assumes opening quote is already parsed
 Node * parse_string()
 {
@@ -136,7 +108,7 @@ Node * parse_string()
       for (int i=0; i<escapes_length; i++)
         if (escapes[i] == ch) { ch = replacements[i]; break; }
     }
-      
+
     if (idx % sizeof(Node) == 0) value_node = (char *) allocate_node();
 
     value_node[idx % chars_per_node] = ch;
@@ -191,7 +163,7 @@ Node * parse_label(int ch)
   value_node[idx % chars_per_node] = '\0';
   idx++;
   result->value.u32 = idx; // set size
-  
+
   // Further processing is done by parse_label_or_number
   // (depending on what it parses at)
   return result;
@@ -247,11 +219,9 @@ Node * parse_label_or_number (int c, int radix)
  * I'm sure that this ought to be a common label plus a LISP macro,
  * but pending a macro system it is of some value to have it built in.
  */
-extern Node * unique_small_string(char * val);
-
 Node * parse_quote()
 {
-  Node * quote = new_node(TYPE_ID, index(unique_small_string("quote")));
+  Node * quote = new_node(TYPE_ID, index(unique_string(make_char_array_node("quote"))));
   quote->element = false;
 
   Node * val = parse();

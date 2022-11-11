@@ -8,6 +8,10 @@ extern uintptr_t memsize;
 
 extern Node * freelist;
 
+extern Node * macros;
+extern Node * unique_strings;
+
+
 void init_node_memory();
 Node * copy(Node * node, int n_recurse);
 
@@ -57,4 +61,8 @@ Node * find_macro(Node * env, Node * name);
 #define pointer(idxval) (&memory[idxval])
 
 #define num_value_nodes(node) ((node->value.u32+7) / 8)
+
+Node * make_char_array_node(char * val);
+Node * unique_string(Node * val);
+
 #endif /* MEMORY_H */

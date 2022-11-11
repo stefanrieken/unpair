@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "node.h"
 #include "memory.h"
@@ -29,7 +30,7 @@ Node * minus(Node * args, Node ** env)
   while (args != NIL)
   {
     result->value.i32 -= args->value.i32;
-    args = &memory[args->next];
+    args = pointer(args->next);
   }
   return result;
 }
@@ -41,7 +42,7 @@ Node * times(Node * args, Node ** env)
   while (args != NIL)
   {
     result->value.i32 *= args->value.i32;
-    args = &memory[args->next];
+    args = pointer(args->next);
   }
   return result;
 }
@@ -97,10 +98,10 @@ Node * cdr (Node * val, Node ** env)
 {
   Node * list = pointer(val->value.u32);
   // don't repackage NIL result into a single pointer-with-type result
-  if (list == NIL) return list;
+  if (list == NIL) return NIL;
 
-  Node * result = &memory[list->next];
-  if(result->element) return result; // deconstruct Pair
+  Node * result = pointer(list->next);
+  if(result->element && (result != NIL)) return result; // deconstruct Pair
   else return new_node(TYPE_NODE, list->next);
 }
 
@@ -114,7 +115,12 @@ Node * cdr (Node * val, Node ** env)
 Node * cons (Node * car, Node ** env)
 {
   Node * cdr = pointer(car->next);
-  if (cdr->type == TYPE_NODE)
+  if (cdr->value.u32 == 0)
+  {
+    car = copy(car,0);
+    car->next = 0;
+  }
+  else if (cdr->type == TYPE_NODE)
   {
     // In-line the sublist
     car = copy(car, 0);
@@ -126,10 +132,10 @@ Node * cons (Node * car, Node ** env)
   {
     // Pretend to be a pair
     car = copy(car, 1);
-    cdr = &memory[car->next];
+    cdr = pointer(car->next);
     cdr->element = true;
   }
-  
+
   // Even a single cons cell returned
   // should be presented as an Element
   // with type tagging:
@@ -161,4 +167,3 @@ int find_primitive(char * name)
   for (int i=0; i< NUM_PRIMITIVES; i++) if (strcmp(primitives[i], name) == 0) return i;
   return -1;
 }
-

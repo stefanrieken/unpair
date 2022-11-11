@@ -50,7 +50,7 @@
  *
  *    Either:
  *    push int 42
- *    push slot *x 
+ *    push slot *x
  *    call set! 3
  *
  *    Or:
@@ -61,7 +61,7 @@
  *    Or:
  *    push int 42
  *    set  slot *x     ;; special command?
- *    
+ *
  */
 
 #include <stdint.h>
@@ -78,7 +78,8 @@
 
 #include "transform.h"
 #include "eval.h"
-
+// For unique_string and friends
+#include "parse.h"
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
@@ -124,18 +125,27 @@ Node * define_variable(Node ** def_env, Node * transform_env, Node * expr)
 {
   if (expr->next != 0)
   {
-    // Make new env entry
-    Node * name = copy(pointer(expr->next), 0);
-    name->element = false;
-    name->next = 0;
+    Node * name = pointer(expr->next);
+    if (name->type == TYPE_NODE)
+    {
+      // We have the syntactic sugar version: (define (f x) ...)
+      // (not quite) 'macrotransform' this to (define f (lambda (x) ...))
+      Node * body = pointer(name->next);
+      name = pointer(name->value.u32);
 
+      Node * lambda = chain(TYPE_ID, index(unique_string(make_char_array_node("lambda"))), // "lambda"
+                      chain(TYPE_NODE, name->next, // (x)
+                      body)); // ...
+
+      expr = chain(expr->type, expr->value.u32, // "define"
+             chain(TYPE_ID, name->value.u32,  // "f"
+             chain(TYPE_NODE, index(lambda), NIL))); // (lambda x ...)
+             //print(expr);
+    }
     // Chain into to environment (at front)
-    Node * newval = new_node(TYPE_NODE, index(name));
-    newval->element = false;
-    newval->next = index(*def_env);
-    (*def_env) = newval;
+    (*def_env) = chain(TYPE_NODE, index(copy(name, 0)), *def_env);
 
-    // Change the run-time expression (borrow code for 'set')
+    // Transform the run-time expression (borrow code for 'set')
     return transform_set(def_env, transform_env, expr);
   }
   // else
@@ -232,6 +242,5 @@ Node * transform_expr(Node * expr, Node ** constructing_env, Node * existing_env
 Node * transform(Node * node, Node ** constructing_env, Node * existing_env)
 {
     if (node->element) return transform_elem(node, constructing_env, existing_env);
-    else return transform_expr(node, constructing_env, existing_env);  
+    else return transform_expr(node, constructing_env, existing_env);
 }
-

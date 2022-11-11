@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>	
+#include <string.h>
 
 #include "node.h"
 #include "memory.h"
@@ -29,38 +29,7 @@ Node * def_arg(Node * env, Node * name)
   name->next = 0;
 
   // Chain into to environment (at front)
-  Node * newval = new_node(TYPE_NODE, index(name));
-  newval->element = false;
-  newval->next = index(env);
-  env = newval;
-  return env;
-}
-
-/**
- * Make arglist as array, so that it may
- * be instantiated by a single 'copy' call,
- * after which variables can (almost) directly refer to their index.
- */
-
-Node * arglist_as_array(Node * arglist)
-{
-  int len = length(arglist);
-  Node * result = new_array_node(TYPE_NODE, len << 3);
-
-  Node * arg = &nodearray(result)[0]; // may be out-of-bounds; then while is not entered
-  while (arglist != NIL)
-  {
-    arg->mark = false;
-    arg->element = false; // ?
-    arg->type = arglist->type;
-    arg->array = false; if (arglist->array) printf("Error: can't in-line array\n");
-    arg->value = arglist->value;
-    arg->next = arglist->next == 0 ? 0 : index(arg+1);
-    
-    arg += 1;
-    arglist = &memory[arglist->next];
-  }
-  return result;
+  return chain(TYPE_NODE, index(name), env);
 }
 
 Node * enclose(Node * env, Node * lambda)
@@ -273,5 +242,3 @@ Node * eval(Node * expr, Node * env)
 
   return element(expr);
 }
-
-

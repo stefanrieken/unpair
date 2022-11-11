@@ -46,12 +46,9 @@
   (lambda (_ val)
     (list 'car (list 'cdr val))))
 
-;; better really:
-;(define cadr (lambda (x) (car (cdr x))))
-
 (cadr '(1 2 3))
-'"Map function"
 
+'"Map function"
 (define map
   (lambda (func values)
     (if (= values '())
@@ -62,14 +59,20 @@
 '"Recursive calls finally work, thanks to proper spaghetti stack args"
 (map car (map cdr '((1 2) (3 4))))
 
-;; cannot presently map a macro in
+;; Cannot presently map a macro.
+;; May be possible if we macrotransform stray labels
+;; (but then how do you detect exceptions like 'quote')
+;; (Perhaps the definition of a (good) macro is that it
+;; makes a special form, which is not a first class object?)
 ;(map cadr '((1 2) (3 4)))
 
-;; This one is also still in the making
-;(define-syntax let
-;  (lambda (_ vars body)
-;    (list (list 'lambda (map car vars) body) (map cdr vars))
-;))
-;
-;(let ((foo 33)) (+ foo foo))
+;; So, just redefine it as a function:
+(define cadr (lambda (x) (car (cdr x))))
 
+'"Macro-define 'let' as a lambda"
+(define-syntax let
+  (lambda (_ vars body)
+    (cons (list 'lambda (map car vars) body) (map cadr vars))
+))
+
+(let ((foo 33)) (+ foo foo))

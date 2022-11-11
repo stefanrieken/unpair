@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h>	
+#include <string.h>
 
 #include "node.h"
 #include "memory.h"
@@ -18,6 +18,10 @@
  */
 Node * memory;
 Node * freelist;
+
+Node * macros;
+Node * unique_strings;
+
 uintptr_t memsize;
 
 #define chunksize 1024
@@ -27,6 +31,8 @@ void init_node_memory()
   memory = malloc(sizeof(Node) * chunksize);
   memsize = 0;
   freelist = NIL;
+  macros = NIL;
+  unique_strings = NIL;
 }
 
 Node * init_node(Node * node, Type type, uint32_t value, bool array)
@@ -111,7 +117,7 @@ Node * new_node(Type type, uint32_t value)
   }
 
   //return init_node(allocate_node(), type, value);
-  
+
   Node * result;
   if (reclaimable != NIL)
   {
@@ -121,7 +127,7 @@ Node * new_node(Type type, uint32_t value)
     result = reclaimable;
   }
   else result = allocate_node();
-  
+
   return init_node(result, type, value, false);
 }
 
@@ -155,7 +161,7 @@ Node * retrofit (Node * node)
 
   if ((node-memory) + size_required != memsize) printf("Strange! %ld %ld\n", (node-memory)+size_required, memsize);
   recurse:
- 
+
   if (available == NIL) return node;
 
   int size_available = 1;
@@ -163,7 +169,7 @@ Node * retrofit (Node * node)
 
   if (size_available > size_required)
     size_available = resize(available, size_available, size_required);
-  
+
   if (size_available == size_required)
   {
     //printf("Retrofitting; size=%d\n", size_required);print(node);
@@ -176,12 +182,12 @@ Node * retrofit (Node * node)
 
     return result;
   }
-  
+
   // else
   //printf("(%d != %d)", size_available, size_required);
   before = available;
   available = pointer(available->next);
- 
+
   goto recurse;
 }
 
@@ -292,3 +298,38 @@ Node * find_macro(Node * env, Node * name)
   return &memory[memory[result->value.u32].next];
 }
 
+/**
+ * Return the item in 'unique_strings' that is equal to 'val',
+ * or chain in 'val' (and return it) if it is not there yet.
+ * Deletes 'val' if not unique!
+ */
+Node * make_char_array_node(char * val)
+{
+  Node * node = new_array_node(TYPE_CHAR, strlen(val)+1);
+  char * value = strval(node);
+  strcpy (value, val);
+  node->element = false;
+  node->array = true;
+  return node;
+}
+
+Node * unique_string(Node * val)
+{
+  Node * where = unique_strings;
+  while (where != NIL)
+  {
+    if(strcmp(strval(val), strval(where)) == 0)
+    {
+      // Assume just parsed 'val'; so may remove
+      memsize -= num_value_nodes(val)+1;
+      return where;
+    }
+    where = &memory[where->next];
+  }
+
+  // Not found: use given node;
+  // Call 'retrofit' now that we know we can afford it
+  val->next = index(unique_strings);
+  unique_strings = retrofit(val);
+  return unique_strings;
+}

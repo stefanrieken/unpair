@@ -29,14 +29,24 @@ void print_node(Node * node)
       printf("%s", strval(&memory[node->value.u32]));
       break;
     case TYPE_NODE:
-      printf("(");
-      if (node->value.u32 != 0) print_node(&memory[node->value.u32]);
-      printf(")");
+      if (node->value.u32 == 0) printf("nil");
+      else if (node->value.u32 == 1) printf("#t");
+      else
+      {
+        printf("(");
+        if (node->value.u32 != 0) print_node(&memory[node->value.u32]);
+        printf(")");
+      }
       break;
     case TYPE_FUNC:
-      printf("(lambda ");
-      print_node(&memory[ memory [ memory[node->value.u32].next ].next ] );
-      printf(")");
+      if (index(node) == 0) printf("#nil");
+      else if (index(node) == 1) printf("#tr");
+      else
+      {
+        printf("(lambda ");
+        print_node(&memory[ memory [ memory[node->value.u32].next ].next ] );
+        printf(")");
+      }
       break;
     case TYPE_ARG:
     //  printf("arg:%s", strval(&memory[memory[node->value.u32].value.u32]));
@@ -63,8 +73,6 @@ void print_node(Node * node)
 void print(Node * node)
 {
   if (node == NULL) return; // happens when EOF
-  if(node == NIL) {printf("()\n"); return;}
-  if(node == NIL+1) {printf("#t\n"); return;}
 
   //if (node->type == TYPE_NODE) printf("{");
   print_node(node);

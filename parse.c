@@ -68,7 +68,7 @@ Node * parse_nodes()
       if (ch != ')')
       {
         printf("Parse error: expecting ')' at end of dotted pair\n");
-        return &memory[0];
+        return NULL;
       }
     }
     else

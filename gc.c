@@ -26,7 +26,7 @@ int mark(Node * node)
 
   if (node->next != 0)
     marked += mark(&memory[node->next]);
-  
+
   return marked;
 }
 
@@ -61,7 +61,7 @@ Node * sweep()
     current->next = index(freelist);
     freelist = current;
   }
-  
+
   int skip = 1;
   if (current->array) skip += num_value_nodes(current);
 
@@ -69,4 +69,3 @@ Node * sweep()
 
   goto recurse;
 }
-

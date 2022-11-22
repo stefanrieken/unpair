@@ -35,7 +35,9 @@
 (list 1 (+ 1 1) (* 3 1))
 
 '"Apply"
-(define-syntax apply (lambda x (cdr x)))
+;; two ways to define apply:
+;(define-syntax apply (lambda x (cdr x)))
+(define-syntax apply (lambda (x . y) y))
 ;; Works with primitives, user funcs AND user macros
 (apply + 1 2 3)
 (apply list 1 2 3)
@@ -55,6 +57,9 @@
       '()
       (cons (func (car values)) (map func (cdr values)))
 )))
+
+(map car '((1 2) (3 4)))
+(map cdr '((1 2) (3 4)))
 
 '"Recursive calls finally work, thanks to proper spaghetti stack args"
 (map car (map cdr '((1 2) (3 4))))

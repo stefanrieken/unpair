@@ -7,12 +7,14 @@
 
 #include "node.h"
 #include "memory.h"
-#include "print.h"
-#include "parse.h"
-#include "eval.h"
-#include "gc.h"
 
+#include "parse.h"
 #include "transform.h"
+#include "eval.h"
+#include "print.h"
+
+#include "gc.h"
+#include "primitive.h"
 
 // An attempt at lambda-calculus style boolean values.
 // They are at memory locations 0 (false, empty list, NIL) and 1 (true)
@@ -38,7 +40,7 @@ void make_boolean(Node * slot)
                   NIL
   ));
 
-  Node * enclosed = enclose(env, lambda);
+  Node * enclosed = enclose(lambda, &env);
   // Copy result into exisiting 'true' / 'false' slot.
   // This immediately wastes the wrapper node returned by 'enclose'.
   // We could split off a variant of 'enclose' that doesn't return
@@ -55,6 +57,7 @@ int main(int argc, char ** argv)
 
   // Make placeholders for false & true
   Node * nil = new_node(TYPE_NODE, 0); // must add this because index value zero is used as nil
+  nil->element = false;
   Node * truth = new_node(TYPE_INT, 1);
   // ...and start using them!
   Node * env = nil;
@@ -86,17 +89,16 @@ int main(int argc, char ** argv)
     }
 
     node = parse();
-
     // In case of EOF:
     if (node == NULL) continue;
 
     // Compile
     node = transform(node, &env, env);
-
     // In case of compilation error:
     if (node == NULL) continue;
 
-    node = eval(node, env);
+    if (!node->special) node = eval(node, env);
+
     print(node);
 
   } while(node != NULL);

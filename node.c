@@ -9,7 +9,9 @@ char * types[] = {
   "string",
   "id",
   "node",
+  //"expression"
   "func",
+  "arg",
   "var",
   "primitive"
 };

@@ -80,16 +80,52 @@
 #include "eval.h"
 // For unique_string and friends
 #include "parse.h"
+
+Node * transform_quote(Node * value)
+{
+  Node * result = copy(value, 0);
+  result->element = true;
+  result->special = true;
+  return result;
+}
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
 Node * transform_if(Node ** constructing_env, Node * existing_env, Node * expr)
 {
-  Node * iff = copy(expr, 0);
-  iff->next = index(transform_elements(pointer(expr->next), constructing_env, existing_env));
+  Node * iff =  new_node(TYPE_PRIMITIVE, find_primitive("if"));
+  iff->element = false;
+
+  Node * test = pointer(expr->next);
+  Node * thenn = pointer(test->next);
+  Node * elsse = pointer(thenn->next);
+
+  test = transform_elem(test, constructing_env, existing_env);
+  thenn = transform_elem(thenn, constructing_env, existing_env);
+  thenn->special = true;
+  elsse = transform_elem(elsse, constructing_env, existing_env);
+  elsse->special = true;
+
+  iff->next = index(test);
+  test->next = index(thenn);
+  thenn->next = index(elsse);
+
   return iff;
 }
 
+ // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
+Node * transform_lambda(Node * expr)
+{
+   Node * lambda =  new_node(TYPE_PRIMITIVE, find_primitive("lambda"));
+   lambda->element = false;
+   Node * args = copy(pointer(expr->next), 1);
+   args->special = true;
+   Node * body = pointer(args->next);
+   body->special = true;
+   
+   lambda->next = index(args);
+   return lambda;
+}
 /**
  * Transform the expressions for define and set! to their eval-time form.
  */
@@ -100,14 +136,18 @@ Node * transform_set(Node ** constructing_env, Node * existing_env, Node * expr)
     Node * name = pointer(expr->next);
     Node * value = pointer(name->next); // may be NIL
 
-    Node * expr2 =copy(expr, 0);
-    Node * var = transform_elem(name, constructing_env, existing_env); // does the VAR lookup, or any other applicable shenanigans
+//    Node * expr2 = copy(expr, 0);
+    Node * label = pointer(expr->value.u32);
+    Node * expr2 =  new_node(TYPE_PRIMITIVE, find_primitive(strval(label)));
+    expr2->element = false;
+    Node * var = transform_elem(name, constructing_env, existing_env); // does the VAR lookup, or any other applicable shenanigans. NOTE: no true expressions are expected here
     var->element = false;
-    Node * val = transform(value, constructing_env, existing_env);
+    var->special = true;
+
+    Node * val = transform_elem(value, constructing_env, existing_env);
 
     expr2->next = index(var);
     var->next = index(val);
-
     return expr2;
   }
   // else
@@ -119,7 +159,7 @@ Node * transform_set(Node ** constructing_env, Node * existing_env, Node * expr)
  * Define the variable, transforming but not eval'ing the variable expression.
  * expr: e.g. the arguments to 'define' (simplest form), so (label, value)
  *
- * Returns the transformed form fur further execution upon 'eval' time.
+ * Returns the transformed form for further execution upon 'eval' time.
  */
 Node * define_variable(Node ** def_env, Node * transform_env, Node * expr)
 {
@@ -171,6 +211,8 @@ Node * macrotransform(Node * expr, Node * env)
   // Keep executing macros until final form is reached
   while (macro != NIL)
   {
+    //print(macro);
+
     // Execute common lambda, but make sure it does
     // not evaluate its args, which are now code (fragments)
     // TODO: we presently only pass it existing_env,
@@ -194,9 +236,23 @@ Node * transform_elem(Node * elem, Node ** constructing_env, Node * existing_env
     if (result == NIL) printf("Compilation error: '%s' not found.\n", strval(&memory[elem->value.u32]));
     return result;
   }
-  else if (elem->type == TYPE_NODE)
+  else if (elem->type == TYPE_NODE && elem->value.u32 != 0)
   {
-    return new_node(TYPE_NODE, index(transform_expr(&memory[elem->value.u32], constructing_env, existing_env)));
+    Node * result = transform_expr(&memory[elem->value.u32], constructing_env, existing_env);
+
+    // Detect .->(quote x) => .-> (x)
+    // To return it as x, not as (x).
+    if (result->element)
+    {
+      result->element = elem->element;
+      return result;
+    }
+    else
+    {
+      result = new_node(TYPE_NODE, index(result));
+      result->element = elem->element;
+      return result;
+    }
   }
   // else
   return elem;
@@ -229,8 +285,8 @@ Node * transform_expr(Node * expr, Node ** constructing_env, Node * existing_env
     if (strcmp("define", chars) == 0) return define_variable(constructing_env, existing_env, expr);
     if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, existing_env, expr);
     if (strcmp("set!", chars) == 0) return transform_set(constructing_env, existing_env, expr);
-    if (strcmp("lambda", chars) == 0) return expr; // Lambda should be eval'ed at eval time; and its args should be regarded as plain data up to that point.
-    if (strcmp("quote" , chars) == 0) return expr; // This one too.
+    if (strcmp("lambda", chars) == 0) return transform_lambda(expr);
+    if (strcmp("quote" , chars) == 0) return transform_quote(pointer(expr->next)); //element(pointer(expr->next)); // because after this step, raw labels and nodes are recognized as data
     if (strcmp("if", chars) == 0) return transform_if(constructing_env, existing_env, expr);
     // else - find primitive or user defined function
     return transform_elements(expr, constructing_env, existing_env);

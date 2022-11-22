@@ -41,6 +41,7 @@ Node * init_node(Node * node, Type type, uint32_t value, bool array)
   node->type = type;
   node->mark = false;
   node->element = true;
+  node->special = false;
   node->next = 0;
   node->value.u32 = value;
 
@@ -309,6 +310,7 @@ Node * make_char_array_node(char * val)
   char * value = strval(node);
   strcpy (value, val);
   node->element = false;
+  node->special = false;
   node->array = true;
   return node;
 }

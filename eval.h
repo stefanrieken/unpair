@@ -14,4 +14,3 @@ Node * apply(Node * funcexpr, Node * env);
 
 Node * run_lambda(Node * env, Node * expr, Node * args, bool eval_args);
 
-Node * enclose(Node * env, Node * lambda);

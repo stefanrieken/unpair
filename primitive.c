@@ -246,7 +246,11 @@ Node * print_string(Node * expr, Node ** env)
     expr = pointer(expr->next);
   }
 
-  return pointer_to(NIL);
+  // Muffle console echo of a return value AND
+  // always add a newline when on console -
+  // all in one return statement!
+  // (now only to reduce the number of nodes being created to repeat an existing string...)
+  return new_node(TYPE_ID, index(unique_string(make_char_array_node(""))));
 }
 
 Node * eval_cb(Node * expr, Node ** env)

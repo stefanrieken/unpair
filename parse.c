@@ -45,12 +45,6 @@ Node * parse_nodes()
 
   // else
   Node * val = parse_value(ch);
-  if (!val->element)
-  {
-    // We have parsed a full sublist as our 'value';
-    // convert our value field to a pointer to that list.
-    val = new_node(TYPE_NODE, index(val));
-  }
 
   // In all cases, we're being a list here (or a pair, or a false list - but not an atom).
   val->element = false;
@@ -241,7 +235,7 @@ Node * parse_value(int ch)
   }
 
   if(ch == '(') return new_node(TYPE_NODE, index(parse_nodes())); // we parse one element here; so if list, wrap into node pointer
-  if (ch == '\'') return parse_quote();
+  if (ch == '\'') return new_node(TYPE_NODE, index(parse_quote()));
   if (ch == '\"') return parse_string();
   else return parse_label_or_number(ch, 10); // Everything is a label for now; refine based on actual value later.
 }

@@ -9,7 +9,6 @@
 #include "eval.h"
 #include "primitive.h"
 #include "print.h"
-// ...because we didn't do it before:
 #include "transform.h"
 
 Node * eval_and_chain(Node * args, Node * env)
@@ -135,17 +134,13 @@ Node * apply(Node * funcexpr, Node * env)
   {
     case TYPE_INT:
       return run_integer(env, func, args);
-      break;
     case TYPE_FUNC:
       return run_lambda(env, func, args, true);
-      break;
     case TYPE_PRIMITIVE:
       return run_primitive(env, func, args);
-      break;
     default:
       printf("Runtime error: can't execute type '%s'.\n", types[func->type]);
       return funcexpr;
-      break;
   }
 }
 
@@ -158,13 +153,10 @@ Node * eval(Node * expr, Node * env)
   {
     case TYPE_ARG:
       return element(pointer(lookup(env, pointer(expr->value.u32))->next)); // TYPE_ARG points into the template env; lookup the corresponding var in the execution env
-      break;
     case TYPE_VAR:
       return element(&memory[ memory[expr->value.u32].next ]); // TYPE_VAR is directly accessible, but skip the name and get the value part
-      break;
     case TYPE_NODE:
       return apply(pointer(expr->value.u32), env);
-      break;
     default:
       // TYPE_INT, TYPE_STRING, TYPE_ID (raw ID, not var), TYPE_NODE (raw data, not expr or block)
       return element(expr);

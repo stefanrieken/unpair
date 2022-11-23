@@ -1,5 +1,4 @@
-
-;; Lambda definitions
+'"Lambda definitions"
 (define square (lambda (x) (* x x)))
 
 (define quad (lambda (y) (* (square y) (square y))))
@@ -34,50 +33,20 @@
 (define list (lambda x x))
 (list 1 (+ 1 1) (* 3 1))
 
-'"Apply"
-;; two ways to define apply:
-;(define-syntax apply (lambda x (cdr x)))
-(define-syntax apply (lambda (x . y) y))
-;; Works with primitives, user funcs AND user macros
-(apply + 1 2 3)
-(apply list 1 2 3)
-(apply add 1 2 3)
+'"Functions defined in lib.lisp"
 
-'"Cadr"
-(define-syntax cadr
-  (lambda (_ val)
-    (list 'car (list 'cdr val))))
+(apply + '(1 2 3))
+(apply list '(1 2 3))
+;; As is common in most LISPs, macros can not be passed as arguments
+;(apply add '(1 2 3))
 
 (cadr '(1 2 3))
-
-'"Map function"
-(define map
-  (lambda (func values)
-    (if (= values '())
-      '()
-      (cons (func (car values)) (map func (cdr values)))
-)))
 
 (map car '((1 2) (3 4)))
 (map cdr '((1 2) (3 4)))
 
+(let ((foo 33)) (+ foo foo))
+
 '"Recursive calls finally work, thanks to proper spaghetti stack args"
 (map car (map cdr '((1 2) (3 4))))
 
-;; Cannot presently map a macro.
-;; May be possible if we macrotransform stray labels
-;; (but then how do you detect exceptions like 'quote')
-;; (Perhaps the definition of a (good) macro is that it
-;; makes a special form, which is not a first class object?)
-;(map cadr '((1 2) (3 4)))
-
-;; So, just redefine it as a function:
-(define cadr (lambda (x) (car (cdr x))))
-
-'"Macro-define 'let' as a lambda"
-(define-syntax let
-  (lambda (_ vars body)
-    (cons (list 'lambda (map car vars) body) (map cadr vars))
-))
-
-(let ((foo 33)) (+ foo foo))

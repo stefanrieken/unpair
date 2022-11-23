@@ -19,9 +19,6 @@
 Node * memory;
 Node * freelist;
 
-Node * macros;
-Node * unique_strings;
-
 uintptr_t memsize;
 
 #define chunksize 1024
@@ -31,8 +28,6 @@ void init_node_memory()
   memory = malloc(sizeof(Node) * chunksize);
   memsize = 0;
   freelist = NIL;
-  macros = NIL;
-  unique_strings = NIL;
 }
 
 Node * init_node(Node * node, Type type, uint32_t value, bool array)

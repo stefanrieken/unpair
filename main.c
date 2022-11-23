@@ -49,29 +49,18 @@ void make_boolean(Node * slot)
   slot->type = enclosed->type;
 }
 
-int main(int argc, char ** argv)
+Node * nil;
+Node * truth;
+Node * environment;
+Node * macros;
+Node * unique_strings;
+
+void repl(FILE * file, bool show_results)
 {
-  // Setup
-  infile = stdin;
-  init_node_memory();
-
-  // Make placeholders for false & true
-  Node * nil = new_node(TYPE_NODE, 0); // must add this because index value zero is used as nil
-  nil->element = false;
-  Node * truth = new_node(TYPE_INT, 1);
-  // ...and start using them!
-  Node * env = nil;
-  // Fill placeholders (optional functionality; you can comment these out!)
-  make_boolean(nil);
-  make_boolean(truth);
-
-  if (isatty(fileno(stdin))) {
-    printf("\n     **** UNPAIR LISP v1 ****\n");
-    printf("\n %lu BYTE NODE SYSTEM %ld NODES USED\n", sizeof(Node), memsize);
-    printf("\nREADY.\n");
-  }
-
   // REPL!
+  infile = file;
+  bool interactive = isatty(fileno(infile));
+
   Node * node;
   do
   {
@@ -79,12 +68,12 @@ int main(int argc, char ** argv)
     int marked = 0;
     marked += mark(nil);
     marked += mark(truth);
-    marked += mark(env);
+    marked += mark(environment);
     marked += mark(macros);
     marked += mark(unique_strings);
     freelist = sweep();
 
-    if (isatty(fileno(stdin))) {
+    if (interactive) {
       printf("> ");
     }
 
@@ -93,15 +82,46 @@ int main(int argc, char ** argv)
     if (node == NULL) continue;
 
     // Compile
-    node = transform(node, &env, env);
+    node = transform(node, &environment, environment);
     // In case of compilation error:
     if (node == NULL) continue;
 
-    if (!node->special) node = eval(node, env);
+    if (!node->special) node = eval(node, environment);
 
-    print(node);
+    if (show_results) print(node);
 
   } while(node != NULL);
+}
+
+int main(int argc, char ** argv)
+{
+  // Setup
+  init_node_memory();
+
+  // Make placeholders for false & true
+  nil = new_node(TYPE_NODE, 0); // must add this because index value zero is used as nil
+  nil->element = false;
+  truth = new_node(TYPE_INT, 1);
+  // ...and start using them!
+  environment = nil;
+  macros = nil;
+  unique_strings = nil;
+  // Fill placeholders (optional functionality; you can comment these out!)
+  make_boolean(nil);
+  make_boolean(truth);
+
+  FILE * lib = fopen("lib.lisp", "r");
+  repl(lib, false);
+  fclose(lib);
+
+  if (isatty(fileno(stdin))) {
+    printf("\n     **** UNPAIR LISP v1 ****\n");
+    printf("\n %lu BYTE NODE SYSTEM %ld NODES USED\n", sizeof(Node), memsize);
+    printf("\nREADY.\n");
+  }
+
+  repl(stdin, true);
+
   printf("\n"); // neatly exit on a clear line
   return 0;
 }

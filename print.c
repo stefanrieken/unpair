@@ -39,14 +39,9 @@ void print_node(Node * node)
       }
       break;
     case TYPE_FUNC:
-      if (index(node) == 0) printf("#nil");
-      else if (index(node) == 1) printf("#tr");
-      else
-      {
-        printf("(lambda ");
-        print_node(&memory[ memory [ memory[node->value.u32].next ].next ] );
-        printf(")");
-      }
+      printf("(lambda ");
+      print_node(&memory[ memory [ memory[node->value.u32].next ].next ] );
+      printf(")");
       break;
     case TYPE_ARG:
     //  printf("arg:%s", strval(&memory[memory[node->value.u32].value.u32]));

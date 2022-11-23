@@ -234,16 +234,43 @@ Node * enclose(Node * lambda, Node ** env)
   return new_node(TYPE_FUNC, index(closure));
 }
 
-#define NUM_PRIMITIVES 18
+Node * print_string(Node * expr, Node ** env)
+{
+  while (expr != NIL)
+  {
+    if (expr->type == TYPE_INT)
+      printf("%d", expr->value.i32);
+    else if (expr->type == TYPE_STRING || expr->type == TYPE_ID)
+      printf("%s", strval(pointer(expr->value.u32)));
+
+    expr = pointer(expr->next);
+  }
+
+  return pointer_to(NIL);
+}
+
+Node * eval_cb(Node * expr, Node ** env)
+{
+  return eval(transform(expr, env, *env), *env);
+}
+
+Node * apply_cb(Node * expr, Node ** env)
+{
+  return eval(transform(expr, env, *env), *env);
+}
+
+#define NUM_PRIMITIVES 20
 
 char * primitives[NUM_PRIMITIVES] =
 {
   // Integer arithmetic primitives
   "+", "-", "*", "/", "%", "=", "<", ">",
+  // Utility
+  "print",
   // List primitives
   "car", "cdr", "cons",
   // Reflection primitives
-  "env", "element?",
+  "eval", "env", "element?",
   // Special form primitives:
   "lambda", "if", "define", "define-syntax", "set!"
 };
@@ -252,10 +279,12 @@ PrimitiveCb jmptable[NUM_PRIMITIVES] =
 {
   // Integer arithmetic primitives
   plus, minus, times, div, remain, eq, lt, gt,
+  // Utility
+  print_string,
   // List primitives
   car, cdr, cons,
   // Reflection primitives
-  env, is_element,
+  eval_cb, env, is_element,
   // Special form primitives - notice anything?
   enclose, iff, setvar, setvar, setvar
 };

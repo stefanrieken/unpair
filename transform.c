@@ -280,7 +280,6 @@ Node * transform_expr(Node * expr, Node ** constructing_env, Node * existing_env
 
   if (expr->type == TYPE_ID)
   {
-    // Still have to compare strings until labels are unique in memory
     char * chars = strval(pointer(expr->value.u32));
     if (strcmp("define", chars) == 0) return define_variable(constructing_env, existing_env, expr);
     if (strcmp("define-syntax", chars) == 0) return define_variable(&macros, existing_env, expr);
